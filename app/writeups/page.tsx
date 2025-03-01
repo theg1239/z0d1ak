@@ -29,13 +29,13 @@ type Category = {
 export default async function WriteUpsPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | undefined>;
+  searchParams: URLSearchParams;
 }) {
   const params: FetchPostsParams = {
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
-    categoryId: searchParams.categoryId,
-    search: searchParams.search,
+    page: searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1,
+    limit: searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 10,
+    categoryId: searchParams.get("categoryId") || undefined,
+    search: searchParams.get("search") || undefined,
   };
 
   const { posts, totalCount, page, limit } = await fetchAllPosts(params);
@@ -70,7 +70,7 @@ export default async function WriteUpsPage({
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={searchParams.search}
+                  defaultValue={searchParams.get("search") || ""}
                 />
               </div>
               <div className="flex gap-2">
@@ -80,7 +80,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={searchParams.categoryId || ""}
+                  defaultValue={searchParams.get("categoryId") || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
@@ -142,10 +142,18 @@ export default async function WriteUpsPage({
               ))}
             </div>
 
+            {/* Pagination Controls */}
             <div className="flex justify-center mt-8">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page === 1}>
-                  Previous
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  asChild
+                >
+                  <Link href={`?page=${page - 1}&limit=${limit}`} scroll={false}>
+                    Previous
+                  </Link>
                 </Button>
                 {Array.from({ length: totalPages }).map((_, idx) => {
                   const pageNum = idx + 1;
@@ -155,13 +163,23 @@ export default async function WriteUpsPage({
                       variant="outline"
                       size="sm"
                       className={pageNum === page ? "bg-primary/10" : ""}
+                      asChild
                     >
-                      {pageNum}
+                      <Link href={`?page=${pageNum}&limit=${limit}`} scroll={false}>
+                        {pageNum}
+                      </Link>
                     </Button>
                   );
                 })}
-                <Button variant="outline" size="sm" disabled={page === totalPages}>
-                  Next
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === totalPages}
+                  asChild
+                >
+                  <Link href={`?page=${page + 1}&limit=${limit}`} scroll={false}>
+                    Next
+                  </Link>
                 </Button>
               </div>
             </div>
