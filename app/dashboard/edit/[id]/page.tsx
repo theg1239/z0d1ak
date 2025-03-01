@@ -7,8 +7,10 @@ import { SiteHeader } from "@/components/site-header";
 import { getPostById } from "@/app/actions/getPost";
 import { EditorWrapper } from "./editor-wrapper";
 
-export default async function EditPostPage(props: { params: { id: string } }) {
-  const params = await Promise.resolve(props.params);
+export default async function EditPostPage(
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
   const post = await getPostById(params.id);
   if (!post) {
     notFound();

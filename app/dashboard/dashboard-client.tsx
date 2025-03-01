@@ -156,7 +156,6 @@ export default function DashboardClient({
               </Card>
             </aside>
 
-            {/* Main Content */}
             <div className="flex-1">
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold">
@@ -201,7 +200,6 @@ export default function DashboardClient({
                                 {post.title}
                               </Link>
                             </CardTitle>
-                            {/* Replace CardDescription with a div to avoid nesting issues */}
                             <div className="line-clamp-2">
                               <ReactMarkdown components={excerptComponents}>
                                 {post.excerpt}
@@ -276,7 +274,6 @@ export default function DashboardClient({
                                 {post.title}
                               </Link>
                             </CardTitle>
-                            {/* Replace CardDescription with a div */}
                             <div className="line-clamp-2">
                               <ReactMarkdown components={excerptComponents}>
                                 {post.excerpt}
