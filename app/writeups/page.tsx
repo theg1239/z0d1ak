@@ -29,20 +29,13 @@ type Category = {
 export default async function WriteUpsPage({
   searchParams,
 }: {
-  searchParams: {
-    page?: string;
-    limit?: string;
-    categoryId?: string;
-    search?: string;
-  };
+  searchParams: Record<string, string | undefined>;
 }) {
-  const sp = await Promise.resolve(searchParams);
-
   const params: FetchPostsParams = {
-    page: sp.page ? parseInt(sp.page) : 1,
-    limit: sp.limit ? parseInt(sp.limit) : 10,
-    categoryId: sp.categoryId,
-    search: sp.search,
+    page: searchParams.page ? parseInt(searchParams.page) : 1,
+    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
+    categoryId: searchParams.categoryId,
+    search: searchParams.search,
   };
 
   const { posts, totalCount, page, limit } = await fetchAllPosts(params);
@@ -77,7 +70,7 @@ export default async function WriteUpsPage({
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={sp.search}
+                  defaultValue={searchParams.search}
                 />
               </div>
               <div className="flex gap-2">
@@ -87,7 +80,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={sp.categoryId || ""}
+                  defaultValue={searchParams.categoryId || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
