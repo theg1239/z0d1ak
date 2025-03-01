@@ -27,22 +27,20 @@ type Category = {
 };
 
 interface PageProps {
-  params: Promise<{ [key: string]: string }>;
-  searchParams: Promise<URLSearchParams>;
+  params: { [key: string]: string };
+  searchParams: Promise<Record<string, string | undefined>>;
 }
 
 export default async function WriteUpsPage({
-  params,
   searchParams,
 }: PageProps) {
-  const resolvedParams = await params;
   const sp = await searchParams;
 
   const paramsObj: FetchPostsParams = {
-    page: sp.get("page") ? parseInt(sp.get("page")!, 10) : 1,
-    limit: sp.get("limit") ? parseInt(sp.get("limit")!, 10) : 10,
-    categoryId: sp.get("categoryId") || undefined,
-    search: sp.get("search") || undefined,
+    page: sp.page ? parseInt(sp.page, 10) : 1,
+    limit: sp.limit ? parseInt(sp.limit, 10) : 10,
+    categoryId: sp.categoryId,
+    search: sp.search,
   };
 
   const { posts, totalCount, page, limit } = await fetchAllPosts(paramsObj);
@@ -71,13 +69,14 @@ export default async function WriteUpsPage({
               </div>
             </div>
 
+            {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={sp.get("search") || ""}
+                  defaultValue={sp.search || ""}
                 />
               </div>
               <div className="flex gap-2">
@@ -87,7 +86,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={sp.get("categoryId") || ""}
+                  defaultValue={sp.categoryId || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
@@ -99,6 +98,7 @@ export default async function WriteUpsPage({
               </div>
             </div>
 
+            {/* Posts Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post: any) => (
                 <Link key={post.id} href={`/writeups/${post.slug}`}>
@@ -149,6 +149,7 @@ export default async function WriteUpsPage({
               ))}
             </div>
 
+            {/* Pagination Controls */}
             <div className="flex justify-center mt-8">
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page === 1} asChild>
