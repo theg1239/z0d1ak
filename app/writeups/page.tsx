@@ -1,15 +1,29 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SiteHeader } from "@/components/site-header";
 import { TerminalText } from "@/components/terminal-text";
-import { CATEGORIES, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { ChevronRight, Search, Filter, User as UserIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getLatestPosts } from "@/app/actions/getLatestPosts";
+import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
+import ReactMarkdown from "react-markdown";
+
+type Category = {
+  id: string;
+  name: string;
+};
 
 export default async function WriteUpsPage() {
   const posts = await getLatestPosts();
+  const categoriesList: Category[] = await fetchCategoriesAction();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -42,9 +56,11 @@ export default async function WriteUpsPage() {
                   <Filter className="h-4 w-4" />
                   Filter
                 </Button>
-                <select className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300">
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
+                >
                   <option value="">All Categories</option>
-                  {CATEGORIES.map((category) => (
+                  {categoriesList.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
@@ -60,16 +76,29 @@ export default async function WriteUpsPage() {
                     <CardHeader className="p-6">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="inline-block rounded-full bg-muted px-2 py-1 text-xs">
-                          {CATEGORIES.find(c => c.id === post.category)?.name}
+                          {post.categoryName ||
+                            categoriesList.find((c: Category) => c.id === post.category)
+                              ?.name}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatDate(post.createdAt)}
                         </div>
                       </div>
                       <CardTitle className="text-xl">{post.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {post.excerpt}
-                      </CardDescription>
+                      {/* Instead of CardDescription, use a div with ReactMarkdown */}
+                      <div className="line-clamp-2">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({ node, ...props }) => <div {...props} />,
+                            h2: ({ node, ...props }) => <div {...props} />,
+                            h3: ({ node, ...props }) => <div {...props} />,
+                            h4: ({ node, ...props }) => <div {...props} />,
+                            p: ({ node, ...props }) => <p {...props} />,
+                          }}
+                        >
+                          {post.excerpt}
+                        </ReactMarkdown>
+                      </div>
                     </CardHeader>
                     <CardContent className="p-6 pt-0">
                       <div className="flex items-center gap-2">
@@ -113,24 +142,6 @@ export default async function WriteUpsPage() {
         </section>
       </main>
       
-      {/* <footer className="border-t border-primary/20 bg-black py-6 md:py-0">
-        <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} H4CK3R5 L0G. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4">
-            <Link href="/about" className="text-sm text-muted-foreground hover:text-primary">
-              About
-            </Link>
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">
-              Privacy
-            </Link>
-            <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">
-              Terms
-            </Link>
-          </div>
-        </div>
-      </footer> */}
     </div>
   );
 }

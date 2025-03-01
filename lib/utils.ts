@@ -17,14 +17,3 @@ export function formatDate(date: Date | string) {
 export function generateRandomId() {
   return Math.random().toString(36).substring(2, 15)
 }
-
-export const CATEGORIES = [
-  { id: "web", name: "Web Exploitation" },
-  { id: "crypto", name: "Cryptography" },
-  { id: "forensics", name: "Digital Forensics" },
-  { id: "reverse", name: "Reverse Engineering" },
-  { id: "pwn", name: "Binary Exploitation" },
-  { id: "misc", name: "Miscellaneous" },
-  { id: "OSINT", name: "OSINT" },
-  { id: "binary", name: "Binary Exploitation" },
-]

@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription
 } from "@/components/ui/card";
 import Link from "next/link";
-import Image from "next/image";
 import {
   PenLine,
   FileText,
@@ -25,6 +24,45 @@ import {
   Tag,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+
+type HeadingProps = React.HTMLAttributes<HTMLDivElement> & {
+  children?: React.ReactNode;
+};
+
+const excerptComponents = {
+  h1: ({ children, ...props }: HeadingProps) => (
+    <div {...props} className="font-bold text-xl">
+      {children}
+    </div>
+  ),
+  h2: ({ children, ...props }: HeadingProps) => (
+    <div {...props} className="font-bold text-lg">
+      {children}
+    </div>
+  ),
+  h3: ({ children, ...props }: HeadingProps) => (
+    <div {...props} className="font-bold text-base">
+      {children}
+    </div>
+  ),
+  h4: ({ children, ...props }: HeadingProps) => (
+    <div {...props} className="font-bold text-sm">
+      {children}
+    </div>
+  ),
+  p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+  code: ({ children, inline, ...props }: any) =>
+    inline ? (
+      <code {...props} className="bg-muted px-1 rounded">
+        {children}
+      </code>
+    ) : (
+      <pre {...props} className="bg-muted p-2 rounded">
+        <code>{children}</code>
+      </pre>
+    ),
+};
 
 export default function DashboardClient({
   session,
@@ -61,7 +99,9 @@ export default function DashboardClient({
                       <CardTitle className="text-lg">
                         {session?.user?.name || "CryptoMaster"}
                       </CardTitle>
-                      <CardDescription>Team Member</CardDescription>
+                      <div className="text-sm text-muted-foreground">
+                        Team Member
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -161,9 +201,12 @@ export default function DashboardClient({
                                 {post.title}
                               </Link>
                             </CardTitle>
-                            <CardDescription className="line-clamp-2">
-                              {post.excerpt}
-                            </CardDescription>
+                            {/* Replace CardDescription with a div to avoid nesting issues */}
+                            <div className="line-clamp-2">
+                              <ReactMarkdown components={excerptComponents}>
+                                {post.excerpt}
+                              </ReactMarkdown>
+                            </div>
                           </CardHeader>
                           <div className="flex items-center gap-2 p-6 md:border-l border-primary/20">
                             <Link href={`/dashboard/edit/${post.id}`}>
@@ -233,9 +276,12 @@ export default function DashboardClient({
                                 {post.title}
                               </Link>
                             </CardTitle>
-                            <CardDescription className="line-clamp-2">
-                              {post.excerpt}
-                            </CardDescription>
+                            {/* Replace CardDescription with a div */}
+                            <div className="line-clamp-2">
+                              <ReactMarkdown components={excerptComponents}>
+                                {post.excerpt}
+                              </ReactMarkdown>
+                            </div>
                           </CardHeader>
                           <div className="flex items-center gap-2 p-6 md:border-l border-primary/20">
                             <Link href={`/dashboard/edit/${post.id}`}>

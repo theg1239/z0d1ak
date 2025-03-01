@@ -43,8 +43,14 @@ import remarkBreaks from "remark-breaks";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { createWriteup } from "@/app/actions/createWriteup";
+import { updatePost } from "@/app/actions/updatePost";
 import { saveDraftPost } from "@/app/actions/saveDraftPost";
-import { CATEGORIES } from "@/lib/utils";
+import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
+
+type Category = {
+  id: string;
+  name: string;
+};
 
 const CTF_TEMPLATES = {
   basic: `# Challenge Name
@@ -106,7 +112,11 @@ const CTF_TEMPLATES = {
 `,
 };
 
-export default function Editor() {
+type EditorProps = {
+  postId?: string;
+};
+
+export default function Editor({ postId }: EditorProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -119,17 +129,19 @@ export default function Editor() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [isDraft, setIsDraft] = useState(false);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [draftId, setDraftId] = useState<string | null>(null);
 
-  const draftKey =
-    session && session.user && session.user.id
-      ? `ctf-writeup-draft-${session.user.id}`
-      : "ctf-writeup-draft";
-
+  const storageKey = postId
+    ? `ctf-writeup-${postId}`
+    : session && session.user && session.user.id
+    ? `ctf-writeup-draft-${session.user.id}`
+    : "ctf-writeup-draft";
+    
   useEffect(() => {
-    const savedWriteup = localStorage.getItem(draftKey);
+    const savedWriteup = localStorage.getItem(storageKey);
     if (savedWriteup) {
       try {
         const parsed = JSON.parse(savedWriteup);
@@ -142,14 +154,14 @@ export default function Editor() {
         console.error("Failed to parse saved writeup", e);
       }
     }
-  }, [draftKey]);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!autoSaveEnabled) return;
     const timeout = setTimeout(() => {
       if (title || content) {
         localStorage.setItem(
-          draftKey,
+          storageKey,
           JSON.stringify({
             title,
             category,
@@ -161,7 +173,25 @@ export default function Editor() {
       }
     }, 5000);
     return () => clearTimeout(timeout);
-  }, [title, category, content, autoSaveEnabled, draftKey]);
+  }, [title, category, content, autoSaveEnabled, storageKey]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCategories = async () => {
+      try {
+        const categories = await fetchCategoriesAction();
+        if (isMounted) {
+          setCategoriesList(categories);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+    fetchCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -182,7 +212,7 @@ export default function Editor() {
           console.error("Auto-saving draft to DB failed", err);
         }
       }
-    }, 120000); // 2 minutes
+    }, 30000);
     return () => clearInterval(interval);
   }, [title, category, content, session, draftId]);
 
@@ -192,6 +222,17 @@ export default function Editor() {
 
   const handleSubmit = async (e: React.FormEvent, saveAsDraft = false) => {
     e.preventDefault();
+
+    if (!title.trim() || !content.trim() || !category) {
+      setError("Please fill in all required fields including a valid category.");
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields including a valid category.",
+        variant: "destructive",
+      });   
+      return;
+    }
+
     if (!session || !session.user || !session.user.id) {
       setError("User not authenticated");
       return;
@@ -207,16 +248,28 @@ export default function Editor() {
         });
         if (draftResult?.id) setDraftId(draftResult.id);
       } else {
-        await createWriteup({
-          title,
-          categoryId: category,
-          content,
-          authorId: session.user.id,
-          isDraft: false,
-        });
+        if (postId) {
+          const excerpt = content.slice(0, 200);
+          await updatePost({
+            id: postId,
+            title,
+            categoryId: category,
+            content,
+            excerpt,
+            isDraft: false,
+          });
+        } else {
+          await createWriteup({
+            title,
+            categoryId: category,
+            content,
+            authorId: session.user.id,
+            isDraft: false,
+          });
+        }
       }
 
-      localStorage.removeItem(draftKey);
+      localStorage.removeItem(storageKey);
 
       toast({
         title: saveAsDraft ? "Draft saved to DB successfully" : "Writeup published successfully",
@@ -236,7 +289,7 @@ export default function Editor() {
 
   const clearDraft = () => {
     if (confirm("Are you sure you want to clear this draft? This action cannot be undone.")) {
-      localStorage.removeItem(draftKey);
+      localStorage.removeItem(storageKey);
       setTitle("");
       setCategory("");
       setContent("");
@@ -352,7 +405,11 @@ export default function Editor() {
 
   return (
     <form onSubmit={(e) => handleSubmit(e, false)}>
-      <Card className={`overflow-hidden ${isFullscreen ? "border-0 rounded-none shadow-none" : "bg-card/50 backdrop-blur-sm border-primary/10"}`}>
+      <Card
+        className={`overflow-hidden ${
+          isFullscreen ? "border-0 rounded-none shadow-none" : "bg-card/50 backdrop-blur-sm border-primary/10"
+        }`}
+      >
         <CardHeader className="p-6">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-1">
@@ -375,14 +432,14 @@ export default function Editor() {
               <Label htmlFor="category" className="text-sm font-medium mb-2 block text-primary">
                 Category
               </Label>
-              <Select value={category} onValueChange={setCategory} required>
+              <Select value={category} onValueChange={(val) => setCategory(val)}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                  {categoriesList.map((c: Category) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -391,11 +448,23 @@ export default function Editor() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => insertTemplate("basic")} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => insertTemplate("basic")}
+                className="text-xs"
+              >
                 <FileCode2 className="h-3.5 w-3.5 mr-1" />
                 Basic Template
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => insertTemplate("detailed")} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => insertTemplate("detailed")}
+                className="text-xs"
+              >
                 <FileCode2 className="h-3.5 w-3.5 mr-1" />
                 Detailed Template
               </Button>
@@ -423,7 +492,12 @@ export default function Editor() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setIsFullscreen(!isFullscreen)}
+                    >
                       {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </Button>
                   </TooltipTrigger>
@@ -461,7 +535,7 @@ export default function Editor() {
                   <span className="text-sm font-medium">Preview</span>
                   <CopyButton text={content} />
                 </div>
-                <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto prose dark:prose-invert max-w-none">
+                <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
                   {content ? (
                     <MarkdownPreview content={content} />
                   ) : (
@@ -514,7 +588,7 @@ export default function Editor() {
                   </Button>
                 </div>
               </div>
-              <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto prose dark:prose-invert max-w-none">
+              <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
                 {content ? (
                   <MarkdownPreview content={content} />
                 ) : (
@@ -528,13 +602,22 @@ export default function Editor() {
         </CardContent>
 
         {(!isFullscreen || viewMode === "preview") && (
-          <CardFooter className={`${isFullscreen ? "fixed bottom-0 left-0 right-0 bg-background border-t z-50" : "p-6"} flex flex-wrap gap-3`}>
+          <CardFooter
+            className={`${
+              isFullscreen ? "fixed bottom-0 left-0 right-0 bg-background border-t z-50" : "p-6"
+            } flex flex-wrap gap-3`}
+          >
             <Button type="submit" variant="default" className="gap-2">
               <Save className="h-4 w-4" />
-              Publish Writeup
+              {postId ? "Update Writeup" : "Publish Writeup"}
             </Button>
             <div className="flex-1"></div>
-            <Button type="button" variant="secondary" className="gap-2" onClick={(e) => handleSubmit(e, true)}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2"
+              onClick={(e) => handleSubmit(e, true)}
+            >
               <Clock className="h-4 w-4" />
               Save as Draft
             </Button>
@@ -559,7 +642,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Heading 1</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("## $1", 3)}>
@@ -570,7 +652,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Heading 2</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("### $1", 4)}>
@@ -581,9 +662,7 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Heading 3</p>
           </TooltipContent>
         </Tooltip>
-  
         <Separator orientation="vertical" className="h-6 mx-1" />
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("**$1**", 2)}>
@@ -594,7 +673,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Bold (Ctrl+B)</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("*$1*", 1)}>
@@ -605,7 +683,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Italic (Ctrl+I)</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("[$1](url)", 1)}>
@@ -616,7 +693,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Link (Ctrl+K)</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("![alt text](image-url)", 2)}>
@@ -627,9 +703,7 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Image</p>
           </TooltipContent>
         </Tooltip>
-  
         <Separator orientation="vertical" className="h-6 mx-1" />
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("- $1", 2)}>
@@ -640,7 +714,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Bullet List</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("1. $1", 3)}>
@@ -651,7 +724,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Numbered List</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("- [ ] $1", 6)}>
@@ -662,9 +734,7 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Task List</p>
           </TooltipContent>
         </Tooltip>
-  
         <Separator orientation="vertical" className="h-6 mx-1" />
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("```\n$1\n```", 4)}>
@@ -675,7 +745,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Code Block</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("```python\n$1\n```", 10)}>
@@ -686,7 +755,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Python Code Block</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("```bash\n$1\n```", 8)}>
@@ -697,7 +765,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Terminal/Bash</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -715,7 +782,6 @@ function MarkdownToolbar({ onInsert }: { onInsert: (syntax: string, selectionOff
             <p>Table</p>
           </TooltipContent>
         </Tooltip>
-  
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onInsert("`flag{$1}`", 6)}>
@@ -757,55 +823,111 @@ function CopyButton({ text }: { text: string }) {
 
 function MarkdownPreview({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkBreaks]}
-      components={{
-        code({ node, inline, className, children, ...props }: any) {
-          const match = /language-(\w+)/.exec(className || "");
-          return !inline && match ? (
-            <SyntaxHighlighter
-              style={vscDarkPlus as { [key: string]: React.CSSProperties }}
-              language={match[1]}
-              PreTag="div"
-              className="rounded-md"
+    <div className="prose dark:prose-invert max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{
+          br: ({ node, ...props }) => (
+            <br style={{ display: "block", content: "", marginTop: "0.75rem" }} {...props} />
+          ),
+          h1: ({ node, ...props }) => (
+            <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginTop: "1.5rem", marginBottom: "1rem" }} {...props} />
+          ),
+          h2: ({ node, ...props }) => (
+            <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", marginTop: "1.25rem", marginBottom: "0.75rem" }} {...props} />
+          ),
+          h3: ({ node, ...props }) => (
+            <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", marginTop: "1rem", marginBottom: "0.5rem" }} {...props} />
+          ),
+          h4: ({ node, ...props }) => (
+            <h4 style={{ fontSize: "1.25rem", fontWeight: "bold", marginTop: "0.75rem", marginBottom: "0.5rem" }} {...props} />
+          ),
+          p: ({ node, ...props }) => (
+            <p style={{ marginBottom: "1rem", lineHeight: "1.6" }} {...props} />
+          ),
+          ul: ({ node, ...props }) => (
+            <ul style={{ listStyleType: "disc", paddingLeft: "2rem", marginBottom: "1rem" }} {...props} />
+          ),
+          ol: ({ node, ...props }) => (
+            <ol style={{ listStyleType: "decimal", paddingLeft: "2rem", marginBottom: "1rem" }} {...props} />
+          ),
+          li: ({ node, ...props }) => (
+            <li style={{ marginBottom: "0.25rem" }} {...props} />
+          ),
+          blockquote: ({ node, ...props }) => (
+            <blockquote
+              style={{
+                borderLeftWidth: "4px",
+                borderLeftColor: "rgba(0, 255, 170, 0.2)",
+                paddingLeft: "1rem",
+                fontStyle: "italic",
+                marginBottom: "1rem",
+              }}
               {...props}
-            >
-              {String(children).replace(/\n$/, "")}
-            </SyntaxHighlighter>
-          ) : (
-            <code className={className} {...props}>
-              {children}
-            </code>
-          );
-        },
-        table({ node, ...props }: any) {
-          return (
-            <div className="overflow-x-auto">
-              <table className="border-collapse border border-border" {...props} />
+            />
+          ),
+          hr: ({ node, ...props }) => (
+            <hr style={{ marginTop: "1.5rem", marginBottom: "1.5rem" }} {...props} />
+          ),
+          table: ({ node, ...props }) => (
+            <div style={{ overflowX: "auto", marginBottom: "1rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }} {...props} />
             </div>
-          );
-        },
-        th({ node, ...props }: any) {
-          return <th className="border border-border bg-muted p-2 font-semibold" {...props} />;
-        },
-        td({ node, ...props }: any) {
-          return <td className="border border-border p-2" {...props} />;
-        },
-        a({ node, ...props }: any) {
-          return <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" {...props} />;
-        },
-        img({ node, ...props }: any) {
-          return <img className="max-w-full h-auto rounded-md" {...props} />;
-        },
-        blockquote({ node, ...props }: any) {
-          return <blockquote className="border-l-4 border-primary/20 pl-4 italic" {...props} />;
-        },
-        hr({ node, ...props }: any) {
-          return <hr className="my-4 border-border" {...props} />;
-        },
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+          ),
+          th: ({ node, ...props }) => (
+            <th
+              style={{
+                border: "1px solid",
+                padding: "0.5rem",
+                fontWeight: "semibold",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+              }}
+              {...props}
+            />
+          ),
+          td: ({ node, ...props }) => (
+            <td style={{ border: "1px solid", padding: "0.5rem" }} {...props} />
+          ),
+          a: ({ node, ...props }) => (
+            <a style={{ color: "rgb(0, 255, 170)", textDecoration: "none" }} target="_blank" rel="noopener noreferrer" {...props} />
+          ),
+          img: ({ node, ...props }) => (
+            <img style={{ maxWidth: "100%", height: "auto", borderRadius: "0.375rem", marginTop: "1rem", marginBottom: "1rem" }} {...props} />
+          ),
+          code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || "");
+            return !inline && match ? (
+              <SyntaxHighlighter
+                style={vscDarkPlus as { [key: string]: React.CSSProperties }}
+                language={match[1]}
+                PreTag="div"
+                customStyle={{ margin: "1rem 0", borderRadius: "0.375rem" }}
+                {...props}
+              >
+                {String(children).replace(/\n$/, "")}
+              </SyntaxHighlighter>
+            ) : (
+              <code
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  padding: "0.2rem 0.4rem",
+                  borderRadius: "0.25rem",
+                  fontFamily: "monospace",
+                  fontSize: "0.875rem",
+                }}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          pre: ({ node, ...props }) => (
+            <pre style={{ overflowX: "auto", borderRadius: "0.375rem", marginTop: "1rem", marginBottom: "1rem" }} {...props} />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }

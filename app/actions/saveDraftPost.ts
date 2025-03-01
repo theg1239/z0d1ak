@@ -1,21 +1,30 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { posts } from "@/drizzle/schema";
+import { posts, categories } from "@/drizzle/schema";
 import { nanoid } from "nanoid";
 import { validate as isValidUUID } from "uuid";
 import { eq } from "drizzle-orm";
+import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
 
-const CATEGORY_UUIDS: Record<string, string> = {
-  web: "11111111-1111-1111-1111-111111111111",
-  crypto: "22222222-2222-2222-2222-222222222222",
-  forensics: "33333333-3333-3333-3333-333333333333",
-  reverse: "44444444-4444-4444-4444-444444444444",
-  pwn: "55555555-5555-5555-5555-555555555555",
-  misc: "66666666-6666-6666-6666-666666666666",
-  OSINT: "77777777-7777-7777-7777-777777777777",
-  binary: "88888888-8888-8888-8888-888888888888",
-};
+async function resolveCategoryUUID(providedCategory: string): Promise<string> {
+  const trimmed = providedCategory.trim() || "misc";
+  
+  if (isValidUUID(trimmed)) {
+    return trimmed;
+  }
+  
+  const allCategories = await fetchCategoriesAction();
+  const matchedCategory = allCategories.find(
+    (cat) => cat.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  
+  if (!matchedCategory || !isValidUUID(matchedCategory.id)) {
+    throw new Error("Invalid category identifier provided.");
+  }
+  
+  return matchedCategory.id;
+}
 
 export async function saveDraftPost(data: {
   title: string;
@@ -24,15 +33,7 @@ export async function saveDraftPost(data: {
   authorId: string;
   draftId?: string | null;
 }) {
-  let providedCategory = data.categoryId.trim() || "misc";
-  let categoryUUID = providedCategory;
-  if (!isValidUUID(categoryUUID)) {
-    const mappedUUID = CATEGORY_UUIDS[providedCategory.toLowerCase()];
-    if (!mappedUUID || !isValidUUID(mappedUUID)) {
-      throw new Error("Invalid category identifier provided.");
-    }
-    categoryUUID = mappedUUID;
-  }
+  const categoryUUID = await resolveCategoryUUID(data.categoryId);
 
   const excerpt =
     data.content.substring(0, 150) + (data.content.length > 150 ? "..." : "");

@@ -12,7 +12,7 @@ export async function getLatestPosts(limit: number = 3) {
       slug: posts.slug,
       excerpt: posts.excerpt,
       createdAt: posts.createdAt,
-      category: categories.name,
+      categoryName: categories.name,
       author: {
         name: users.name,
       },

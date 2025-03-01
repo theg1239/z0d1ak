@@ -1,21 +1,34 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SiteHeader } from "@/components/site-header";
 import { TerminalText } from "@/components/terminal-text";
 import { GlitchText } from "@/components/glitch-text";
-import { CATEGORIES } from "@/lib/utils";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
-import { Terminal, FileText, Shield, ChevronRight, Trophy } from 'lucide-react';
+import { Terminal, FileText, User, ChevronRight } from "lucide-react";
 import { getLatestPosts } from "@/app/actions/getLatestPosts";
+import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
+import ReactMarkdown from "react-markdown";
+
+type Category = {
+  id: string;
+  name: string;
+};
 
 export default async function Home() {
   const latestPosts = await getLatestPosts(3);
+  const categoriesList: Category[] = await fetchCategoriesAction();
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      
+
       <main className="flex-1">
         <section className="relative py-32 md:py-40 overflow-hidden">
           <div className="container px-4 md:px-6">
@@ -29,8 +42,8 @@ export default async function Home() {
                   <span className="block mt-2">Our Blog</span>
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  <TerminalText 
-                    text="CTF experiences, hacking journey, and writeups." 
+                  <TerminalText
+                    text="CTF experiences, hacking journey, and writeups."
                     typingSpeed={20}
                     startDelay={1000}
                   />
@@ -82,7 +95,7 @@ export default async function Home() {
             </div>
           </div>
         </section>
-        
+
         <section className="py-12 md:py-24">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
@@ -99,38 +112,48 @@ export default async function Home() {
               </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-  {latestPosts.map((post) => (
-    <Link key={post.id} href={`/writeups/${post.slug}`}>
-      <Card className="h-full hover:border-primary/50 transition-all duration-300">
-        <CardHeader className="p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="inline-block rounded-full bg-muted px-2 py-1 text-xs">
-              {CATEGORIES.find(c => c.id === post.category)?.name}
+              {latestPosts.map((post) => (
+                <Link key={post.id} href={`/writeups/${post.slug}`}>
+                  <Card className="h-full hover:border-primary/50 transition-all duration-300">
+                    <CardHeader className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="text-xs text-muted-foreground">
+                          {post.categoryName} &bull; {formatDate(post.createdAt)}
+                        </div>
+                      </div>
+                      <CardTitle className="text-xl">{post.title}</CardTitle>
+                      <div className="line-clamp-2">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({ node, ...props }) => <div {...props} />,
+                            h2: ({ node, ...props }) => <div {...props} />,
+                            h3: ({ node, ...props }) => <div {...props} />,
+                            h4: ({ node, ...props }) => <div {...props} />,
+                            p: ({ node, ...props }) => <p {...props} />,
+                          }}
+                        >
+                          {post.excerpt}
+                        </ReactMarkdown>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0">
+                      <div className="flex items-center gap-2">
+                        <User className="h-6 w-6" />
+                        <div className="text-sm font-medium">
+                          {post.author?.name || "Unknown"}
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="p-6 pt-0">
+                      <div className="flex items-center text-primary text-sm">
+                        Read writeup
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {formatDate(post.createdAt)}
-            </div>
-          </div>
-          <CardTitle className="text-xl">{post.title}</CardTitle>
-          <CardDescription className="line-clamp-2">
-            {post.excerpt}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium">{post.author?.name || "Unknown"}</div>
-          </div>
-        </CardContent>
-        <CardFooter className="p-6 pt-0">
-          <div className="flex items-center text-primary text-sm">
-            Read writeup
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </div>
-        </CardFooter>
-      </Card>
-    </Link>
-  ))}
-</div>
             <div className="flex justify-center mt-8">
               <Link href="/writeups">
                 <Button variant="outline" className="gap-2">
@@ -142,7 +165,6 @@ export default async function Home() {
           </div>
         </section>
       </main>
-      
     </div>
   );
 }

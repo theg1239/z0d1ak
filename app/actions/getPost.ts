@@ -25,3 +25,26 @@ export async function getPostBySlug(slug: string) {
 
   return result[0] || null;
 }
+
+export async function getPostById(id: string) {
+  const result = await db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      excerpt: posts.excerpt,
+      content: posts.content,
+      isDraft: posts.isDraft,
+      categoryId: posts.categoryId,
+      createdAt: posts.createdAt,
+      category: categories.name,
+      author: {
+        name: users.name,
+      },
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.authorId, users.id))
+    .leftJoin(categories, eq(posts.categoryId, categories.id))
+    .where(eq(posts.id, id));
+  return result[0] || null;
+}
