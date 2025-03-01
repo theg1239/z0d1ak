@@ -27,20 +27,27 @@ type Category = {
 };
 
 interface PageProps {
-  params: { [key: string]: string };
-  searchParams: Promise<Record<string, string | undefined>>;
+  params: Promise<{ [key: string]: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function WriteUpsPage({
-  searchParams,
-}: PageProps) {
+const getQueryParam = (
+  param: string | string[] | undefined
+): string | undefined => (Array.isArray(param) ? param[0] : param);
+
+export default async function WriteUpsPage({ searchParams }: PageProps) {
+  const _ = await Promise.resolve(); 
   const sp = await searchParams;
 
   const paramsObj: FetchPostsParams = {
-    page: sp.page ? parseInt(sp.page, 10) : 1,
-    limit: sp.limit ? parseInt(sp.limit, 10) : 10,
-    categoryId: sp.categoryId,
-    search: sp.search,
+    page: getQueryParam(sp.page)
+      ? parseInt(getQueryParam(sp.page)!, 10)
+      : 1,
+    limit: getQueryParam(sp.limit)
+      ? parseInt(getQueryParam(sp.limit)!, 10)
+      : 10,
+    categoryId: getQueryParam(sp.categoryId),
+    search: getQueryParam(sp.search),
   };
 
   const { posts, totalCount, page, limit } = await fetchAllPosts(paramsObj);
@@ -58,7 +65,10 @@ export default async function WriteUpsPage({
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
               <div className="space-y-2">
                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">
-                  <TerminalText text="$ find /writeups -type f | sort" typingSpeed={50} />
+                  <TerminalText
+                    text="$ find /writeups -type f | sort"
+                    typingSpeed={50}
+                  />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   CTF Writeups
@@ -69,14 +79,13 @@ export default async function WriteUpsPage({
               </div>
             </div>
 
-            {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={sp.search || ""}
+                  defaultValue={getQueryParam(sp.search) || ""}
                 />
               </div>
               <div className="flex gap-2">
@@ -86,7 +95,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={sp.categoryId || ""}
+                  defaultValue={getQueryParam(sp.categoryId) || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
