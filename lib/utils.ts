@@ -25,4 +25,6 @@ export const CATEGORIES = [
   { id: "reverse", name: "Reverse Engineering" },
   { id: "pwn", name: "Binary Exploitation" },
   { id: "misc", name: "Miscellaneous" },
+  { id: "OSINT", name: "OSINT" },
+  { id: "binary", name: "Binary Exploitation" },
 ]
