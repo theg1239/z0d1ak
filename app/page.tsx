@@ -1,101 +1,148 @@
-import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { SiteHeader } from "@/components/site-header";
+import { TerminalText } from "@/components/terminal-text";
+import { GlitchText } from "@/components/glitch-text";
+import { CATEGORIES } from "@/lib/utils";
+import Link from "next/link";
+import { formatDate } from "@/lib/utils";
+import { Terminal, FileText, Shield, ChevronRight, Trophy } from 'lucide-react';
+import { getLatestPosts } from "@/app/actions/getLatestPosts";
 
-export default function Home() {
+export default async function Home() {
+  const latestPosts = await getLatestPosts(3);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      
+      <main className="flex-1">
+        <section className="relative py-32 md:py-40 overflow-hidden">
+          <div className="container px-4 md:px-6">
+            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
+              <div className="space-y-4">
+                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm mb-4">
+                  <TerminalText text="$ ./welcome.sh" typingSpeed={80} />
+                </div>
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+                  <GlitchText text="z0d1ak" className="text-primary" />
+                  <span className="block mt-2">Our Blog</span>
+                </h1>
+                <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  <TerminalText 
+                    text="CTF experiences, hacking journey, and writeups." 
+                    typingSpeed={20}
+                    startDelay={1000}
+                  />
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Link href="/writeups">
+                    <Button variant="hacker" size="lg" className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Browse Writeups
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button variant="outline" size="lg" className="gap-2">
+                      <Terminal className="h-4 w-4" />
+                      Join the Team
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="mx-auto lg:ml-auto flex items-center justify-center pb-8">
+                <div className="relative w-full max-w-[800px] aspect-square">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg blur-3xl opacity-50"></div>
+                  <div className="relative bg-black border border-primary/30 rounded-lg p-10 h-full">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-4 w-4 rounded-full bg-destructive"></div>
+                      <div className="h-4 w-4 rounded-full bg-yellow-500"></div>
+                      <div className="h-4 w-4 rounded-full bg-primary"></div>
+                      <div className="ml-2 text-xs text-muted-foreground">terminal</div>
+                    </div>
+                    <div className="font-mono text-lg space-y-3">
+                      <p className="text-muted-foreground">$ whoami</p>
+                      <p className="text-primary">z0d1ak</p>
+                      <p className="text-muted-foreground">$ ls -la /challenges</p>
+                      <p>
+                        <span className="text-blue-400">web</span>{" "}
+                        <span className="text-green-400">crypto</span>{" "}
+                        <span className="text-yellow-400">forensics</span>{" "}
+                        <span className="text-red-400">pwn</span>{" "}
+                        <span className="text-purple-400">reverse</span>
+                      </p>
+                      <p className="text-muted-foreground">$ cat /etc/motd</p>
+                      <p>Welcome to z0d1ak</p>
+                      <p className="text-muted-foreground">$ ./join_team.sh</p>
+                      <p className="text-primary animate-pulse mb-12">Initializing...</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section className="py-12 md:py-24">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
+              <div className="space-y-2">
+                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">
+                  <TerminalText text="$ cat /latest_writeups.txt" typingSpeed={50} />
+                </div>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Latest Writeups
+                </h2>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  Check out the most recent CTF challenge solutions
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+  {latestPosts.map((post) => (
+    <Link key={post.id} href={`/writeups/${post.slug}`}>
+      <Card className="h-full hover:border-primary/50 transition-all duration-300">
+        <CardHeader className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="inline-block rounded-full bg-muted px-2 py-1 text-xs">
+              {CATEGORIES.find(c => c.id === post.category)?.name}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {formatDate(post.createdAt)}
+            </div>
+          </div>
+          <CardTitle className="text-xl">{post.title}</CardTitle>
+          <CardDescription className="line-clamp-2">
+            {post.excerpt}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 pt-0">
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium">{post.author?.name || "Unknown"}</div>
+          </div>
+        </CardContent>
+        <CardFooter className="p-6 pt-0">
+          <div className="flex items-center text-primary text-sm">
+            Read writeup
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </div>
+        </CardFooter>
+      </Card>
+    </Link>
+  ))}
+</div>
+            <div className="flex justify-center mt-8">
+              <Link href="/writeups">
+                <Button variant="outline" className="gap-2">
+                  View All Writeups
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      
     </div>
   );
 }
