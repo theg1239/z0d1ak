@@ -26,23 +26,26 @@ type Category = {
   name: string;
 };
 
-// Next.js App Router page component with correct type definition
 interface PageProps {
-  params: { [key: string]: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ [key: string]: string }>;
+  searchParams: Promise<URLSearchParams>;
 }
 
 export default async function WriteUpsPage({
+  params,
   searchParams,
 }: PageProps) {
-  const params: FetchPostsParams = {
-    page: searchParams.page ? parseInt(searchParams.page as string, 10) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit as string, 10) : 10,
-    categoryId: searchParams.categoryId as string | undefined,
-    search: searchParams.search as string | undefined,
+  const resolvedParams = await params;
+  const sp = await searchParams;
+
+  const paramsObj: FetchPostsParams = {
+    page: sp.get("page") ? parseInt(sp.get("page")!, 10) : 1,
+    limit: sp.get("limit") ? parseInt(sp.get("limit")!, 10) : 10,
+    categoryId: sp.get("categoryId") || undefined,
+    search: sp.get("search") || undefined,
   };
 
-  const { posts, totalCount, page, limit } = await fetchAllPosts(params);
+  const { posts, totalCount, page, limit } = await fetchAllPosts(paramsObj);
   const categoriesList: Category[] = await fetchCategoriesAction();
 
   const totalPages = Math.ceil(totalCount / limit);
@@ -74,7 +77,7 @@ export default async function WriteUpsPage({
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={searchParams.search || ""}
+                  defaultValue={sp.get("search") || ""}
                 />
               </div>
               <div className="flex gap-2">
@@ -84,7 +87,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={searchParams.categoryId || ""}
+                  defaultValue={sp.get("categoryId") || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
@@ -146,15 +149,9 @@ export default async function WriteUpsPage({
               ))}
             </div>
 
-            {/* Pagination Controls */}
             <div className="flex justify-center mt-8">
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  asChild
-                >
+                <Button variant="outline" size="sm" disabled={page === 1} asChild>
                   <Link href={`?page=${page - 1}&limit=${limit}`} scroll={false}>
                     Previous
                   </Link>
@@ -175,12 +172,7 @@ export default async function WriteUpsPage({
                     </Button>
                   );
                 })}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === totalPages}
-                  asChild
-                >
+                <Button variant="outline" size="sm" disabled={page === totalPages} asChild>
                   <Link href={`?page=${page + 1}&limit=${limit}`} scroll={false}>
                     Next
                   </Link>
