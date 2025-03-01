@@ -36,18 +36,18 @@ export default async function WriteUpsPage({
     search?: string;
   };
 }) {
-  // Parse search params
+  const sp = await Promise.resolve(searchParams);
+
   const params: FetchPostsParams = {
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
-    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
-    categoryId: searchParams.categoryId,
-    search: searchParams.search,
+    page: sp.page ? parseInt(sp.page) : 1,
+    limit: sp.limit ? parseInt(sp.limit) : 10,
+    categoryId: sp.categoryId,
+    search: sp.search,
   };
 
   const { posts, totalCount, page, limit } = await fetchAllPosts(params);
   const categoriesList: Category[] = await fetchCategoriesAction();
 
-  // Calculate total pages
   const totalPages = Math.ceil(totalCount / limit);
 
   return (
@@ -60,10 +60,7 @@ export default async function WriteUpsPage({
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
               <div className="space-y-2">
                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">
-                  <TerminalText
-                    text="$ find /writeups -type f | sort"
-                    typingSpeed={50}
-                  />
+                  <TerminalText text="$ find /writeups -type f | sort" typingSpeed={50} />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   CTF Writeups
@@ -74,14 +71,13 @@ export default async function WriteUpsPage({
               </div>
             </div>
 
-            {/* Filter and search controls */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search writeups..."
                   className="pl-10"
-                  defaultValue={searchParams.search}
+                  defaultValue={sp.search}
                 />
               </div>
               <div className="flex gap-2">
@@ -91,7 +87,7 @@ export default async function WriteUpsPage({
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                  defaultValue={searchParams.categoryId || ""}
+                  defaultValue={sp.categoryId || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
@@ -103,7 +99,6 @@ export default async function WriteUpsPage({
               </div>
             </div>
 
-            {/* Posts grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post: any) => (
                 <Link key={post.id} href={`/writeups/${post.slug}`}>
@@ -140,9 +135,7 @@ export default async function WriteUpsPage({
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                           <UserIcon className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <div className="text-sm font-medium">
-                          {post.author.name}
-                        </div>
+                        <div className="text-sm font-medium">{post.author.name}</div>
                       </div>
                     </CardContent>
                     <CardFooter className="p-6 pt-0">
@@ -156,7 +149,6 @@ export default async function WriteUpsPage({
               ))}
             </div>
 
-            {/* Pagination controls */}
             <div className="flex justify-center mt-8">
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page === 1}>
@@ -175,11 +167,7 @@ export default async function WriteUpsPage({
                     </Button>
                   );
                 })}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === totalPages}
-                >
+                <Button variant="outline" size="sm" disabled={page === totalPages}>
                   Next
                 </Button>
               </div>
