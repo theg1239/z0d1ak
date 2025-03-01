@@ -10,32 +10,60 @@ import { SiteHeader } from "@/components/site-header";
 import { TerminalText } from "@/components/terminal-text";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { ChevronRight, Search, Filter, User as UserIcon } from "lucide-react";
+import {
+  ChevronRight,
+  Search,
+  Filter,
+  User as UserIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { getLatestPosts } from "@/app/actions/getLatestPosts";
-import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
 import ReactMarkdown from "react-markdown";
+import { fetchAllPosts, FetchPostsParams } from "@/app/actions/fetchAllPosts";
+import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
 
 type Category = {
   id: string;
   name: string;
 };
 
-export default async function WriteUpsPage() {
-  const posts = await getLatestPosts();
+export default async function WriteUpsPage({
+  searchParams,
+}: {
+  searchParams: {
+    page?: string;
+    limit?: string;
+    categoryId?: string;
+    search?: string;
+  };
+}) {
+  // Parse search params
+  const params: FetchPostsParams = {
+    page: searchParams.page ? parseInt(searchParams.page) : 1,
+    limit: searchParams.limit ? parseInt(searchParams.limit) : 10,
+    categoryId: searchParams.categoryId,
+    search: searchParams.search,
+  };
+
+  const { posts, totalCount, page, limit } = await fetchAllPosts(params);
   const categoriesList: Category[] = await fetchCategoriesAction();
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalCount / limit);
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      
+
       <main className="flex-1">
         <section className="py-12 md:py-16">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
               <div className="space-y-2">
                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">
-                  <TerminalText text="$ find /writeups -type f | sort" typingSpeed={50} />
+                  <TerminalText
+                    text="$ find /writeups -type f | sort"
+                    typingSpeed={50}
+                  />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   CTF Writeups
@@ -45,11 +73,16 @@ export default async function WriteUpsPage() {
                 </p>
               </div>
             </div>
-            
+
+            {/* Filter and search controls */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Search writeups..." className="pl-10" />
+                <Input
+                  placeholder="Search writeups..."
+                  className="pl-10"
+                  defaultValue={searchParams.search}
+                />
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="gap-2">
@@ -58,6 +91,7 @@ export default async function WriteUpsPage() {
                 </Button>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
+                  defaultValue={searchParams.categoryId || ""}
                 >
                   <option value="">All Categories</option>
                   {categoriesList.map((category) => (
@@ -68,7 +102,8 @@ export default async function WriteUpsPage() {
                 </select>
               </div>
             </div>
-            
+
+            {/* Posts grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {posts.map((post: any) => (
                 <Link key={post.id} href={`/writeups/${post.slug}`}>
@@ -77,15 +112,15 @@ export default async function WriteUpsPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <div className="inline-block rounded-full bg-muted px-2 py-1 text-xs">
                           {post.categoryName ||
-                            categoriesList.find((c: Category) => c.id === post.category)
-                              ?.name}
+                            categoriesList.find(
+                              (c: Category) => c.id === post.categoryId
+                            )?.name}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatDate(post.createdAt)}
                         </div>
                       </div>
                       <CardTitle className="text-xl">{post.title}</CardTitle>
-                      {/* Instead of CardDescription, use a div with ReactMarkdown */}
                       <div className="line-clamp-2">
                         <ReactMarkdown
                           components={{
@@ -105,7 +140,9 @@ export default async function WriteUpsPage() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                           <UserIcon className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <div className="text-sm font-medium">{post.author.name}</div>
+                        <div className="text-sm font-medium">
+                          {post.author.name}
+                        </div>
                       </div>
                     </CardContent>
                     <CardFooter className="p-6 pt-0">
@@ -118,22 +155,31 @@ export default async function WriteUpsPage() {
                 </Link>
               ))}
             </div>
-            
+
+            {/* Pagination controls */}
             <div className="flex justify-center mt-8">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" disabled={page === 1}>
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" className="bg-primary/10">
-                  1
-                </Button>
-                <Button variant="outline" size="sm">
-                  2
-                </Button>
-                <Button variant="outline" size="sm">
-                  3
-                </Button>
-                <Button variant="outline" size="sm">
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pageNum = idx + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant="outline"
+                      size="sm"
+                      className={pageNum === page ? "bg-primary/10" : ""}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === totalPages}
+                >
                   Next
                 </Button>
               </div>
@@ -141,7 +187,6 @@ export default async function WriteUpsPage() {
           </div>
         </section>
       </main>
-      
     </div>
   );
 }

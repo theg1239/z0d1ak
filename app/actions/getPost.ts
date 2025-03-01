@@ -5,6 +5,10 @@ import { posts, users, categories } from "@/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function getPostBySlug(slug: string) {
+  const decodedSlug = decodeURIComponent(slug);
+  console.log("getPostBySlug called with slug:", slug);
+  console.log("Decoded slug:", decodedSlug);
+
   const result = await db
     .select({
       id: posts.id,
@@ -21,8 +25,9 @@ export async function getPostBySlug(slug: string) {
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
     .leftJoin(categories, eq(posts.categoryId, categories.id))
-    .where(and(eq(posts.slug, slug), eq(posts.isDraft, false)));
+    .where(and(eq(posts.slug, decodedSlug), eq(posts.isDraft, false)));
 
+  console.log("getPostBySlug: raw query result:", result);
   return result[0] || null;
 }
 
