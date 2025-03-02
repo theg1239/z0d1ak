@@ -67,6 +67,24 @@ export const verificationTokens = pgTable(
   })
 );
 
+export const likes = pgTable("likes", {
+  userId: uuid("user_id").notNull(),
+  postId: uuid("post_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  primaryKey: [table.userId, table.postId],
+}));
+
+// New table for comments
+export const comments = pgTable("comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: uuid("post_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn(() => new Date()),
+});
+
 export const schema = {
   users,
   categories,
@@ -74,4 +92,6 @@ export const schema = {
   accounts,
   sessions,
   verificationTokens,
+  likes,
+  comments,
 };

@@ -15,6 +15,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import SidebarTableOfContents from "@/components/table-of-contents";
+import LikeComments from "@/components/like-comments";
 
 type HeadingProps = React.HTMLAttributes<HTMLHeadingElement> & {
   children?: React.ReactNode;
@@ -360,6 +361,9 @@ export default async function WriteupPage({ params }: WriteupPageProps) {
               {post.content}
             </ReactMarkdown>
           </div>
+
+          {/* Like and Comments Section */}
+          <LikeComments postId={post.id} />
 
           {relatedPosts && relatedPosts.length > 0 && (
             <div className="mt-12 pt-6 border-t border-primary/20">

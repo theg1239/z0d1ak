@@ -14,7 +14,7 @@ import {
 import { SiteHeader } from "@/components/site-header"
 import { TerminalText } from "@/components/terminal-text"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { LogIn, UserPlus } from "lucide-react"
 
@@ -40,9 +40,14 @@ export default function LoginPage() {
       })
 
       if (result?.ok) {
-        router.push("/dashboard")
+        const session = await getSession()
+        if (session?.user?.role === "member") {
+          router.push("/dashboard")
+        } else {
+          router.push("/writeups")
+        }
       } else {
-        setError(result?.error || "Login failed")
+        setError(result?.error || "Login failed. Please check your credentials and try again.")
       }
     } else {
       const res = await fetch("/api/register", {
@@ -62,12 +67,12 @@ export default function LoginPage() {
           password,
         })
         if (result?.ok) {
-          router.push("/dashboard")
+          router.push("/writeups")
         } else {
-          setError(result?.error || "Login failed")
+          setError(result?.error || "Registration succeeded but login failed. Please try logging in.")
         }
       } else {
-        setError(data.error || "Registration failed")
+        setError(data.error || "Registration failed. Please try again.")
       }
     }
 
@@ -134,14 +139,14 @@ export default function LoginPage() {
                         href="/forgot-password"
                         className="text-xs text-primary hover:underline"
                       >
-                        
+                        Forgot password?
                       </Link>
                     )}
                   </div>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="Enter a secure password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
