@@ -22,15 +22,17 @@ type VerificationTokenType = {
   expires: Date;
 };
 
-function convertUser(row: any): AdapterUser {
+function convertUser(row: any): AdapterUser & { role?: string } {
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     image: row.image,
+    role: row.role,
     emailVerified: row.emailVerified ? new Date(row.emailVerified) : null,
   };
 }
+
 
 export function DrizzleAdapter(db: PostgresJsDatabase): Adapter {
   const adapter: Adapter = {

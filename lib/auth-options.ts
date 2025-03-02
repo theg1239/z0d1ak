@@ -32,9 +32,10 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           image: user.image,
+          role: user.role,
           emailVerified: null,
         };
-      },
+      },      
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -50,16 +51,18 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role || "viewer";
       }
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
         session.user.id = token.id;
+        session.user.role = token.role || "viewer";
       }
       return session;
     },
-  },
+  },  
   pages: { signIn: "/login" },
   debug: process.env.NODE_ENV === "development",
 };

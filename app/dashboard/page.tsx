@@ -6,9 +6,11 @@ import DashboardClient from "./dashboard-client";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || !session.user.id) {
+
+  if (!session || !session.user || !session.user.id || session.user.role !== "member") {
     redirect("/login");
   }
+
   const posts = await getUserPosts(session.user.id);
   return <DashboardClient session={session} posts={posts} />;
 }
