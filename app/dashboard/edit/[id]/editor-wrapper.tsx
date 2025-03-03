@@ -17,7 +17,7 @@ function EditorWrapper({ post }: { post: any }) {
           excerpt: post.excerpt,
           isDraft: post.isDraft,
           category: post.categoryId,
-          savedAt: new Date().toISOString(),
+          tags: post.tags || [],
         })
       );
     }

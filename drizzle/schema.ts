@@ -75,7 +75,6 @@ export const likes = pgTable("likes", {
   primaryKey: [table.userId, table.postId],
 }));
 
-// New table for comments
 export const comments = pgTable("comments", {
   id: uuid("id").defaultRandom().primaryKey(),
   postId: uuid("post_id").notNull(),
@@ -84,6 +83,18 @@ export const comments = pgTable("comments", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn(() => new Date()),
 });
+
+export const tags = pgTable("tags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull().unique(),
+});
+
+export const post_tags = pgTable("post_tags", {
+  postId: uuid("post_id").notNull(),
+  tagId: uuid("tag_id").notNull(),
+}, (table) => ({
+  primaryKey: [table.postId, table.tagId],
+}));
 
 export const schema = {
   users,
@@ -94,4 +105,6 @@ export const schema = {
   verificationTokens,
   likes,
   comments,
+  tags,
+  post_tags,
 };

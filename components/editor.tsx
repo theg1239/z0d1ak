@@ -21,7 +21,6 @@ import {
   Clock,
   Copy,
   FileDown,
-  RotateCcw,
   Heading1,
   Heading2,
   Heading3,
@@ -124,6 +123,7 @@ export default function Editor({ postId }: EditorProps) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [content, setContent] = useState("");
+  const [tags, setTags] = useState("");
   const [viewMode, setViewMode] = useState<"write" | "preview" | "split">("write");
   const [error, setError] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -148,8 +148,9 @@ export default function Editor({ postId }: EditorProps) {
         setTitle(parsed.title || "");
         setCategory(parsed.category || "");
         setContent(parsed.content || "");
+        setTags(parsed.tags ? (Array.isArray(parsed.tags) ? parsed.tags.join(", ") : parsed.tags) : "");
         setLastSaved(parsed.savedAt ? new Date(parsed.savedAt) : null);
-        setIsDraft(true);
+        setIsDraft(parsed.isDraft);
       } catch (e) {
         console.error("Failed to parse saved writeup", e);
       }
@@ -166,14 +167,16 @@ export default function Editor({ postId }: EditorProps) {
             title,
             category,
             content,
+            tags,
             savedAt: new Date().toISOString(),
+            isDraft,
           })
         );
         setLastSaved(new Date());
       }
     }, 5000);
     return () => clearTimeout(timeout);
-  }, [title, category, content, autoSaveEnabled, storageKey]);
+  }, [title, category, content, tags, autoSaveEnabled, storageKey, isDraft]);
 
   useEffect(() => {
     let isMounted = true;
@@ -201,6 +204,7 @@ export default function Editor({ postId }: EditorProps) {
             title,
             categoryId: category,
             content,
+            tags: tags.split(",").map(tag => tag.trim()).filter(Boolean),
             authorId: session.user.id,
             draftId,
           });
@@ -214,7 +218,13 @@ export default function Editor({ postId }: EditorProps) {
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [title, category, content, session, draftId]);
+  }, [title, category, content, tags, session, draftId]);
+
+  useEffect(() => {
+    if (isFullscreen) {
+      setViewMode("split");
+    }
+  }, [isFullscreen]);
 
   if (status === "unauthenticated") {
     redirect("/login");
@@ -238,11 +248,13 @@ export default function Editor({ postId }: EditorProps) {
       return;
     }
     try {
+      const tagsArray = tags.split(",").map(tag => tag.trim()).filter(Boolean);
       if (saveAsDraft) {
         const draftResult = await saveDraftPost({
           title,
           categoryId: category,
           content,
+          tags: tagsArray,
           authorId: session.user.id,
           draftId,
         });
@@ -257,12 +269,14 @@ export default function Editor({ postId }: EditorProps) {
             content,
             excerpt,
             isDraft: false,
+            tags: tagsArray,
           });
         } else {
           await createWriteup({
             title,
             categoryId: category,
             content,
+            tags: tagsArray,
             authorId: session.user.id,
             isDraft: false,
           });
@@ -293,6 +307,7 @@ export default function Editor({ postId }: EditorProps) {
       setTitle("");
       setCategory("");
       setContent("");
+      setTags("");
       setLastSaved(null);
       setIsDraft(false);
       setDraftId(null);
@@ -404,122 +419,167 @@ export default function Editor({ postId }: EditorProps) {
   }, [isFullscreen]);
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, false)}>
-      <Card
-        className={`overflow-hidden ${
-          isFullscreen ? "border-0 rounded-none shadow-none" : "bg-card/50 backdrop-blur-sm border-primary/10"
-        }`}
-      >
-        <CardHeader className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="flex-1">
-              <Label htmlFor="title" className="text-sm font-medium mb-2 block text-primary">
-                Title
+    <div className={isFullscreen ? "fixed inset-0 z-50 bg-background p-4 overflow-auto" : ""}>
+      <form onSubmit={(e) => handleSubmit(e, false)}>
+        <Card
+          className={`overflow-hidden ${isFullscreen ? "border-0 rounded-none shadow-none h-full" : "bg-card/50 backdrop-blur-sm border-primary/10"}`}
+        >
+          <CardHeader className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <Label htmlFor="title" className="text-sm font-medium mb-2 block text-primary">
+                  Title
+                </Label>
+                <Input
+                  id="title"
+                  className="bg-background/50"
+                  placeholder="Enter writeup title"
+                  value={title}
+                  onChange={(e) => {
+                    setUndoStack((prev) => [...prev, content]);
+                    setTitle(e.target.value);
+                  }}
+                  required
+                />
+              </div>
+              <div className="md:w-1/3">
+                <Label htmlFor="category" className="text-sm font-medium mb-2 block text-primary">
+                  Category
+                </Label>
+                <Select value={category} onValueChange={(val) => setCategory(val)}>
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriesList.map((c: Category) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mb-4">
+              <Label htmlFor="tags" className="text-sm font-medium mb-2 block text-primary">
+                Tags (comma separated)
               </Label>
               <Input
-                id="title"
+                id="tags"
                 className="bg-background/50"
-                placeholder="Enter writeup title"
-                value={title}
-                onChange={(e) => {
-                  setUndoStack((prev) => [...prev, content]);
-                  setTitle(e.target.value);
-                }}
-                required
+                placeholder="Enter tags separated by commas"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
               />
             </div>
-            <div className="md:w-1/3">
-              <Label htmlFor="category" className="text-sm font-medium mb-2 block text-primary">
-                Category
-              </Label>
-              <Select value={category} onValueChange={(val) => setCategory(val)}>
-                <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoriesList.map((c: Category) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => insertTemplate("basic")}
-                className="text-xs"
-              >
-                <FileCode2 className="h-3.5 w-3.5 mr-1" />
-                Basic Template
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => insertTemplate("detailed")}
-                className="text-xs"
-              >
-                <FileCode2 className="h-3.5 w-3.5 mr-1" />
-                Detailed Template
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center space-x-2 text-sm">
-                <Switch id="auto-save" checked={autoSaveEnabled} onCheckedChange={setAutoSaveEnabled} />
-                <Label htmlFor="auto-save" className="text-xs">
-                  Auto-save
-                </Label>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertTemplate("basic")}
+                  className="text-xs"
+                >
+                  <FileCode2 className="h-3.5 w-3.5 mr-1" />
+                  Basic Template
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => insertTemplate("detailed")}
+                  className="text-xs"
+                >
+                  <FileCode2 className="h-3.5 w-3.5 mr-1" />
+                  Detailed Template
+                </Button>
               </div>
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-auto">
-                <TabsList className="grid w-auto grid-cols-3">
-                  <TabsTrigger value="write" className="text-xs px-2 py-1">
-                    Write
-                  </TabsTrigger>
-                  <TabsTrigger value="preview" className="text-xs px-2 py-1">
-                    Preview
-                  </TabsTrigger>
-                  <TabsTrigger value="split" className="text-xs px-2 py-1">
-                    Split
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setIsFullscreen(!isFullscreen)}
-                    >
-                      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2 text-sm">
+                  <Switch id="auto-save" checked={autoSaveEnabled} onCheckedChange={setAutoSaveEnabled} />
+                  <Label htmlFor="auto-save" className="text-xs">
+                    Auto-save
+                  </Label>
+                </div>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-auto">
+                  <TabsList className="grid w-auto grid-cols-3">
+                    <TabsTrigger value="write" className="text-xs px-2 py-1">
+                      Write
+                    </TabsTrigger>
+                    <TabsTrigger value="preview" className="text-xs px-2 py-1">
+                      Preview
+                    </TabsTrigger>
+                    <TabsTrigger value="split" className="text-xs px-2 py-1">
+                      Split
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                      >
+                        {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className={`${isFullscreen ? "p-0" : "p-6 pt-0"}`}>
-          {viewMode === "split" ? (
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 min-w-0">
+          <CardContent className={`${isFullscreen ? "p-0" : "p-6 pt-0"}`}>
+            {viewMode === "split" ? (
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b">
+                    <MarkdownToolbar onInsert={insertMarkdown} />
+                  </div>
+                  <textarea
+                    ref={editorRef}
+                    className="flex min-h-[400px] md:min-h-[600px] w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Write your CTF writeup here using Markdown..."
+                    value={content}
+                    onChange={(e) => {
+                      setUndoStack((prev) => [...prev, content]);
+                      setContent(e.target.value);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    required
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b flex justify-between items-center">
+                    <span className="text-sm font-medium">Preview</span>
+                    <CopyButton text={content} />
+                  </div>
+                  <div className="min-h-[400px] md:min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
+                    {content ? (
+                      <MarkdownPreview content={content} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <p>Your preview will appear here. Start writing to see it.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : viewMode === "write" ? (
+              <>
                 <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b">
                   <MarkdownToolbar onInsert={insertMarkdown} />
                 </div>
                 <textarea
                   ref={editorRef}
-                  className="flex min-h-[600px] w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-[400px] md:min-h-[600px] w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Write your CTF writeup here using Markdown..."
                   value={content}
                   onChange={(e) => {
@@ -529,13 +589,32 @@ export default function Editor({ postId }: EditorProps) {
                   onKeyDown={handleKeyDown}
                   required
                 />
-              </div>
-              <div className="flex-1 min-w-0">
+              </>
+            ) : (
+              <div className="relative">
                 <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b flex justify-between items-center">
                   <span className="text-sm font-medium">Preview</span>
-                  <CopyButton text={content} />
+                  <div className="flex items-center gap-2">
+                    <CopyButton text={content} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const blob = new Blob([content], { type: "text/markdown" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${title || "writeup"}.md`;
+                        a.click();
+                      }}
+                      className="text-xs"
+                    >
+                      <FileDown className="h-3.5 w-3.5 mr-1" />
+                      Export
+                    </Button>
+                  </div>
                 </div>
-                <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
+                <div className="min-h-[400px] md:min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
                   {content ? (
                     <MarkdownPreview content={content} />
                   ) : (
@@ -545,86 +624,32 @@ export default function Editor({ postId }: EditorProps) {
                   )}
                 </div>
               </div>
-            </div>
-          ) : viewMode === "write" ? (
-            <>
-              <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b">
-                <MarkdownToolbar onInsert={insertMarkdown} />
-              </div>
-              <textarea
-                ref={editorRef}
-                className="flex min-h-[600px] w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Write your CTF writeup here using Markdown..."
-                value={content}
-                onChange={(e) => {
-                  setUndoStack((prev) => [...prev, content]);
-                  setContent(e.target.value);
-                }}
-                onKeyDown={handleKeyDown}
-                required
-              />
-            </>
-          ) : (
-            <div className="relative">
-              <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-2 border-b flex justify-between items-center">
-                <span className="text-sm font-medium">Preview</span>
-                <div className="flex items-center gap-2">
-                  <CopyButton text={content} />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const blob = new Blob([content], { type: "text/markdown" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `${title || "writeup"}.md`;
-                      a.click();
-                    }}
-                    className="text-xs"
-                  >
-                    <FileDown className="h-3.5 w-3.5 mr-1" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-              <div className="min-h-[600px] border border-input rounded-md p-4 bg-background/50 overflow-auto">
-                {content ? (
-                  <MarkdownPreview content={content} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p>Your preview will appear here. Start writing to see it.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
+            )}
+          </CardContent>
 
-        {(!isFullscreen || viewMode === "preview") && (
-          <CardFooter
-            className={`${
-              isFullscreen ? "fixed bottom-0 left-0 right-0 bg-background border-t z-50" : "p-6"
-            } flex flex-wrap gap-3`}
-          >
-            <Button type="submit" variant="default" className="gap-2">
-              <Save className="h-4 w-4" />
-              {postId ? "Update Writeup" : "Publish Writeup"}
-            </Button>
-            <div className="flex-1"></div>
-            <Button
-              type="button"
-              variant="secondary"
-              className="gap-2"
-              onClick={(e) => handleSubmit(e, true)}
+          {(!isFullscreen || viewMode === "preview") && (
+            <CardFooter
+              className={`${isFullscreen ? "fixed bottom-0 left-0 right-0 bg-background border-t z-50" : "p-6"} flex flex-wrap gap-3`}
             >
-              <Clock className="h-4 w-4" />
-              Save as Draft
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
-    </form>
+              <Button type="submit" variant="default" className="gap-2">
+                <Save className="h-4 w-4" />
+                {postId ? "Update Writeup" : "Publish Writeup"}
+              </Button>
+              <div className="flex-1"></div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2"
+                onClick={(e) => handleSubmit(e, true)}
+              >
+                <Clock className="h-4 w-4" />
+                Save as Draft
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      </form>
+    </div>
   );
 }
 

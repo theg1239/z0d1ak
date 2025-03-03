@@ -1,14 +1,14 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { posts, categories, users } from "@/drizzle/schema";
-import { eq, desc, like, and, count } from "drizzle-orm";
+import { posts, categories, users, post_tags, tags } from "@/drizzle/schema";
+import { eq, desc, like, and, count, sql } from "drizzle-orm";
 
 export interface FetchPostsParams {
-  page?: number; 
-  limit?: number;      
-  categoryId?: string; 
-  search?: string;     
+  page?: number;
+  limit?: number;
+  categoryId?: string;
+  search?: string;
 }
 
 export async function fetchAllPosts({
@@ -20,9 +20,7 @@ export async function fetchAllPosts({
   console.log("fetchAllPosts called with:", { page, limit, categoryId, search });
 
   const offset = (page - 1) * limit;
-
-  const conditions = [];
-  conditions.push(eq(posts.isDraft, false));
+  const conditions = [eq(posts.isDraft, false)];
 
   if (categoryId) {
     conditions.push(eq(posts.categoryId, categoryId));
@@ -44,11 +42,15 @@ export async function fetchAllPosts({
       author: {
         name: users.name,
       },
+      tags: sql<string>`COALESCE(array_agg(DISTINCT ${tags.name}), '[]')`.as("tags"),
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(users, eq(posts.authorId, users.id))
+    .leftJoin(post_tags, eq(posts.id, post_tags.postId))
+    .leftJoin(tags, eq(post_tags.tagId, tags.id))
     .where(whereCondition)
+    .groupBy(posts.id, categories.name, users.name)
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
@@ -65,6 +67,7 @@ export async function fetchAllPosts({
   const formattedPosts = postsResult.map((post) => ({
     ...post,
     createdAt: post.createdAt?.toISOString() ?? "",
+    tags: post.tags ? JSON.parse(post.tags) : [],
   }));
 
   return { posts: formattedPosts, totalCount, page, limit };

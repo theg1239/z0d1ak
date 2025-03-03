@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { likes, comments, users } from "@/drizzle/schema"; // Ensure 'users' is imported
+import { likes, comments, users } from "@/drizzle/schema";
 import { eq, count, and, desc } from "drizzle-orm";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -13,23 +13,19 @@ export async function likePost(postId: string) {
   }
   const userId = session.user.id;
 
-  // Ensure postId and userId are properly referenced
   const existingLike = await db
     .select()
     .from(likes)
     .where(and(eq(likes.postId, postId as any), eq(likes.userId, userId as any)));
 
   if (existingLike.length > 0) {
-    // Unlike: remove the existing like
     await db
       .delete(likes)
       .where(and(eq(likes.postId, postId as any), eq(likes.userId, userId as any)));
   } else {
-    // Like: insert a new like
     await db.insert(likes).values({ postId, userId, createdAt: new Date() });
   }
 
-  // Get the updated likes count
   const countResult = await db
     .select({ count: count() })
     .from(likes)
@@ -48,7 +44,6 @@ export async function addComment(postId: string, content: string) {
   }
   const userId = session.user.id;
 
-  // Insert the comment into the database
   const insertResult = await db
     .insert(comments)
     .values({ postId, userId, content, createdAt: new Date(), updatedAt: new Date() })
@@ -56,7 +51,6 @@ export async function addComment(postId: string, content: string) {
 
   const commentId = insertResult[0].id;
 
-  // Fetch the inserted comment with the user info (join)
   const [comment] = await db
     .select({
       id: comments.id,
@@ -68,7 +62,6 @@ export async function addComment(postId: string, content: string) {
     .leftJoin(users, eq(comments.userId, users.id))
     .where(eq(comments.id, commentId as any));
 
-  // Convert the createdAt date to an ISO string before returning
   return {
     ...comment,
     createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : ""
@@ -109,7 +102,6 @@ export async function getComments(postId: string) {
     .where(eq(comments.postId, postId as any))
     .orderBy(desc(comments.createdAt))
 
-  // Convert each comment's createdAt to an ISO string
   return commentsData.map((comment) => ({
     ...comment,
     createdAt: comment.createdAt ? new Date(comment.createdAt).toISOString() : ""
