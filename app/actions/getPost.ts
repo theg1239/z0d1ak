@@ -21,7 +21,12 @@ export async function getPostBySlug(slug: string) {
       author: {
         name: users.name,
       },
-      tags: sql<string>`COALESCE(array_agg(${tags.name}), '[]')`.as("tags"),
+      tags: sql<string>`
+        COALESCE(
+          array_to_json(array_remove(array_agg(DISTINCT ${tags.name}), null)),
+          '[]'
+        )
+      `.as("tags"),
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
@@ -37,7 +42,12 @@ export async function getPostBySlug(slug: string) {
   return {
     ...post,
     createdAt: post.createdAt?.toISOString() ?? "",
-    tags: post.tags ? JSON.parse(post.tags) : [],
+    tags:
+      typeof post.tags === "string" && post.tags.length > 0
+        ? JSON.parse(post.tags)
+        : Array.isArray(post.tags)
+        ? post.tags
+        : [],
   };
 }
 
@@ -56,7 +66,12 @@ export async function getPostById(id: string) {
       author: {
         name: users.name,
       },
-      tags: sql<string>`COALESCE(array_agg(${tags.name}), '[]')`.as("tags"),
+      tags: sql<string>`
+        COALESCE(
+          array_to_json(array_remove(array_agg(DISTINCT ${tags.name}), null)),
+          '[]'
+        )
+      `.as("tags"),
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
@@ -71,6 +86,11 @@ export async function getPostById(id: string) {
   return {
     ...post,
     createdAt: post.createdAt?.toISOString() ?? "",
-    tags: post.tags ? JSON.parse(post.tags) : [],
+    tags:
+      typeof post.tags === "string" && post.tags.length > 0
+        ? JSON.parse(post.tags)
+        : Array.isArray(post.tags)
+        ? post.tags
+        : [],
   };
 }
