@@ -12,7 +12,12 @@ export async function getRelatedPosts(currentPostId: string, categoryId: string,
       slug: posts.slug,
       excerpt: posts.excerpt,
       createdAt: posts.createdAt,
-      tags: sql<string>`COALESCE(array_agg(${tags.name}), '{}')`.as("tags"),
+      tags: sql<string>`
+        COALESCE(
+          array_to_json(array_remove(array_agg(DISTINCT ${tags.name}), null)),
+          '[]'
+        )
+      `.as("tags"),
     })
     .from(posts)
     .leftJoin(post_tags, eq(posts.id, post_tags.postId))
@@ -31,6 +36,11 @@ export async function getRelatedPosts(currentPostId: string, categoryId: string,
   return result.map((post) => ({
     ...post,
     createdAt: post.createdAt?.toISOString() ?? "",
-    tags: post.tags ? JSON.parse(post.tags) : [],
+    tags:
+      typeof post.tags === "string" && post.tags.length > 0
+        ? JSON.parse(post.tags)
+        : Array.isArray(post.tags)
+        ? post.tags
+        : [],
   }));
 }

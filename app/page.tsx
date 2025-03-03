@@ -151,7 +151,7 @@ function MobileHero() {
       <TerminalWindow title="z0d1ak@ctf:~" className="mx-auto" fullWidth>
         <div className="space-y-3">
           <TerminalPrompt text="whoami" />
-          <p className="text-white">z0d1ak - Cybersecurity CTF Team</p>
+          <p className="text-white">z0d1ak - CTF Team</p>
 
           <TerminalPrompt text="ls -la /skills" />
           <div className="grid grid-cols-2 gap-2 my-2">
@@ -208,7 +208,6 @@ function MobileHero() {
   )
 }
 
-// Desktop Hero with full-height terminal
 function DesktopHero() {
   return (
     <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center min-h-[calc(100vh-4rem)]">
@@ -220,11 +219,11 @@ function DesktopHero() {
         <div className="space-y-4">
           <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
             <GlitchText text="z0d1ak" className="text-primary" />
-            <span className="block mt-2 text-white">CTF Team</span>
+            <span className="block mt-2 text-white">Our Blog</span>
           </h1>
           <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
             <TerminalText
-              text="Hacking challenges, solving puzzles, breaking security."
+              text="Hacking challenges and breaking security."
               typingSpeed={20}
               startDelay={1000}
             />

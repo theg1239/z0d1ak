@@ -42,7 +42,12 @@ export async function fetchAllPosts({
       author: {
         name: users.name,
       },
-      tags: sql<string>`COALESCE(array_agg(DISTINCT ${tags.name}), '[]')`.as("tags"),
+      tags: sql<string>`
+        COALESCE(
+          array_to_json(array_remove(array_agg(DISTINCT ${tags.name}), null)),
+          '[]'
+        )
+      `.as("tags"),
     })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
@@ -67,7 +72,12 @@ export async function fetchAllPosts({
   const formattedPosts = postsResult.map((post) => ({
     ...post,
     createdAt: post.createdAt?.toISOString() ?? "",
-    tags: post.tags ? JSON.parse(post.tags) : [],
+    tags:
+      typeof post.tags === "string" && post.tags.length > 0
+        ? JSON.parse(post.tags)
+        : Array.isArray(post.tags)
+        ? post.tags
+        : [],
   }));
 
   return { posts: formattedPosts, totalCount, page, limit };
