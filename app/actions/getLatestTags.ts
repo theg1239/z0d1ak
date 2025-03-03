@@ -20,8 +20,8 @@ export async function getLatestCompetitions(limit: number = 5) {
     .orderBy(desc(sql`MAX(${posts.createdAt})`))
     .limit(limit);
 
-  return competitions.map((comp) => ({
-    ...comp,
-    latestPost: comp.latestPost ? comp.latestPost.toISOString() : null,
-  }));
+    return competitions.map((comp) => ({
+      ...comp,
+      latestPost: comp.latestPost ? new Date(comp.latestPost).toISOString() : null,
+    }));    
 }
