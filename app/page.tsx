@@ -33,7 +33,7 @@ export interface Post {
   createdAt: string
   categoryName: string | null
   author: { name: string } | null
-  tags: any
+  tags: any[]
 }
 
 export interface Category {
@@ -294,7 +294,7 @@ function DesktopHero() {
 
             <TerminalPrompt text="cat /etc/motd" />
             <div className="bg-primary/5 border-l-4 border-primary p-2 my-2">
-              <p className="text-white">Welcome to z0d1ak CTF team's terminal.</p>
+              <p className="text-white">Welcome to the z0d1ak CTF team blog</p>
               <p className="text-white">We hack, we learn, we share knowledge.</p>
             </div>
 
@@ -315,9 +315,9 @@ function DesktopHero() {
 }
 
 export default async function Home() {
-  const latestPosts = await getCachedLatestPosts(3)
-  const categoriesList = await getCachedCategories()
-  const competitions = await getCachedCompetitions(5)
+  const latestPosts: Post[] = await getCachedLatestPosts(3)
+  const categoriesList: Category[] = await getCachedCategories()
+  const competitions: Competition[] = await getCachedCompetitions(5)
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-green-500">
@@ -326,19 +326,16 @@ export default async function Home() {
       <main className="flex-1">
         <section className="relative py-8 md:py-0 overflow-hidden">
           <div className="container px-4 md:px-6">
-            {/* Mobile Hero (shown on small screens) */}
             <div className="md:hidden">
               <MobileHero />
             </div>
 
-            {/* Desktop Hero (hidden on small screens) */}
             <div className="hidden md:block">
               <DesktopHero />
             </div>
           </div>
         </section>
 
-        {/* Competitions Section - Terminal Style */}
         <section className="py-12 md:py-20">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8 md:mb-12">
@@ -362,7 +359,7 @@ export default async function Home() {
 
                 <div className="space-y-6">
                   {competitions.map((competition, index) => (
-                    <div key={competition.id} className="border-b border-primary/20 pb-4 last:border-0">
+                    <div key={competition.id || index} className="border-b border-primary/20 pb-4 last:border-0">
                       <div className="flex items-start gap-2 md:gap-4">
                         <div className="flex-shrink-0 w-6 md:w-8 text-center">
                           <span className="text-primary font-bold">{index + 1}.</span>
@@ -393,8 +390,7 @@ export default async function Home() {
                           </div>
 
                           <div className="font-mono text-xs bg-gray-900 p-2 rounded border border-primary/20 overflow-x-auto">
-                            <span className="text-blue-400">root@z0d1ak</span>:<span className="text-green-400">~</span>
-                            $ ./view_competition.sh --id={competition.id}
+                            <span className="text-blue-400">root@z0d1ak</span>:<span className="text-green-400">~</span>$ ./view_competition.sh --id={competition.id}
                           </div>
 
                           <div className="flex justify-end">
@@ -455,7 +451,7 @@ export default async function Home() {
 
                 <div className="space-y-8">
                   {latestPosts.map((post: Post, index) => (
-                    <div key={post.id} className="relative">
+                    <div key={post.id || index} className="relative">
                       <div className="absolute -left-4 top-0 bottom-0 border-l-2 border-dashed border-primary/30 hidden md:block"></div>
 
                       <div className="ml-0 md:ml-6 relative">
@@ -508,9 +504,9 @@ export default async function Home() {
 
                               {post.tags && post.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
-                                  {post.tags.map((tag: any) => (
+                                  {post.tags.map((tag: any, tagIndex: number) => (
                                     <div
-                                      key={tag.id}
+                                      key={tag.id || tagIndex}
                                       className="flex items-center gap-1 text-xs bg-black/50 px-2 py-1 rounded"
                                     >
                                       <Tag className="h-3 w-3 text-primary" />
@@ -603,4 +599,3 @@ export default async function Home() {
     </div>
   )
 }
-

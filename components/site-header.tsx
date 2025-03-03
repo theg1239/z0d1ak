@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, TerminalIcon, X } from 'lucide-react'
+import { Menu, TerminalIcon, X } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useSession } from "next-auth/react"
 
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { data: session } = useSession()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +20,8 @@ export function SiteHeader() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  const showDashboard = session?.user?.role === "member"
 
   return (
     <header 
@@ -51,11 +55,13 @@ export function SiteHeader() {
               <span className="text-primary/70 mr-1.5">&gt;</span> Competitions
             </Button>
           </Link>
-          <Link href="/dashboard">
-            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10 px-3 h-9">
-              <span className="text-primary/70 mr-1.5">&gt;</span> Dashboard
-            </Button>
-          </Link>
+          {showDashboard && (
+            <Link href="/dashboard">
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10 px-3 h-9">
+                <span className="text-primary/70 mr-1.5">&gt;</span> Dashboard
+              </Button>
+            </Link>
+          )}
           <Link href="/login">
             <Button 
               variant="outline" 
@@ -115,13 +121,15 @@ export function SiteHeader() {
                 >
                   <span className="text-primary/70 mr-2">&gt;</span> Competitions
                 </Link>
-                <Link 
-                  href="/dashboard" 
-                  className="p-4 hover:bg-primary/10 border-b border-primary/10 flex items-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <span className="text-primary/70 mr-2">&gt;</span> Dashboard
-                </Link>
+                {showDashboard && (
+                  <Link 
+                    href="/dashboard" 
+                    className="p-4 hover:bg-primary/10 border-b border-primary/10 flex items-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <span className="text-primary/70 mr-2">&gt;</span> Dashboard
+                  </Link>
+                )}
                 <div className="mt-auto p-4 border-t border-primary/20">
                   <Link 
                     href="/login" 
