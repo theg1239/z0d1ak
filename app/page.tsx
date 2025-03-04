@@ -393,7 +393,7 @@ export default async function Home() {
                           </div>
 
                           <div className="flex justify-end">
-                            <Link href={`/competitions/${competition.id}`}>
+                            <Link href={`/competitions/${competition.name}`}>
                               <Button variant="link" size="sm" className="gap-1 text-primary hover:text-primary/80">
                                 View Challenges
                                 <ChevronRight className="h-3 w-3" />
