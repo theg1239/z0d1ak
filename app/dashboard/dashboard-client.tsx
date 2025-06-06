@@ -48,11 +48,6 @@ interface DashboardPost {
   isDraft: boolean;
 }
 
-interface DashboardClientProps {
-  session: any;
-  posts: DashboardPost[];
-}
-
 type HeadingProps = React.HTMLAttributes<HTMLDivElement> & {
   children?: React.ReactNode
 }
@@ -91,7 +86,6 @@ const excerptComponents = {
     ),
 }
 
-// Function to get category icon based on category name
 function getCategoryIcon(categoryName: string | null | undefined) {
   if (!categoryName) return <FileText className="h-4 w-4" />
 
@@ -129,7 +123,6 @@ export default function DashboardClient({
   const publishedPosts = posts.filter((post) => !post.isDraft)
   const draftPosts = posts.filter((post) => post.isDraft)
 
-  // Update time string every second
   useEffect(() => {
     const updateTime = () => {
       const now = new Date()

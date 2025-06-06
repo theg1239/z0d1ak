@@ -5,7 +5,7 @@ import { posts, tags, post_tags } from "@/drizzle/schema";
 import { nanoid } from "nanoid";
 import { validate as isValidUUID } from "uuid";
 import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
-import { eq } from "drizzle-orm"; // Import eq for proper column filtering
+import { eq } from "drizzle-orm";
 
 async function resolveCategoryUUID(providedCategory: string): Promise<string> {
   const trimmed = providedCategory.trim() || "misc";
