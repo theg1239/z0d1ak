@@ -165,6 +165,25 @@ export default function DashboardClient({
     }
   }
 
+  const handlePublish = async (post: DashboardPost) => {
+    try {
+      setIsLoading(post.id);
+      await updatePost({
+        id: post.id,
+        isDraft: false,
+        title: post.title,
+        content: post.excerpt,
+        excerpt: post.excerpt,
+        categoryId: post.categoryId || "00000000-0000-0000-0000-000000000000",
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to publish post:", error);
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
   const NavItems = () => (
     <nav className="flex flex-col w-full">
       <button
@@ -612,23 +631,91 @@ export default function DashboardClient({
                                   <Edit className="h-4 w-4" />
                                   Edit
                                 </Button>
-                              </Link>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90 flex-1 md:flex-none w-full"
-                              >
-                                <Eye className="h-4 w-4" />
-                                Publish
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10 flex-1 md:flex-none w-full"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </Button>
+                              </Link>                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    disabled={isLoading === post.id}
+                                    className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90 flex-1 md:flex-none w-full"
+                                  >
+                                    {isLoading === post.id ? (
+                                      <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                    Publish
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-black/80 backdrop-blur-sm border-primary/30">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-lg">
+                                      Publish Writeup
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-sm text-muted-foreground">
+                                      Are you sure you want to publish "{post.title}"? It will be visible to all users.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex justify-between border-t border-primary/20 pt-4">
+                                    <AlertDialogCancel asChild>
+                                      <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                                        Cancel
+                                      </Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                      <Button
+                                        variant="default"
+                                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                        onClick={() => handlePublish(post)}
+                                      >
+                                        Publish
+                                      </Button>
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isLoading === post.id}
+                                    className="gap-1 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10 flex-1 md:flex-none w-full"
+                                  >
+                                    {isLoading === post.id ? (
+                                      <div className="w-4 h-4 border-2 border-destructive/30 border-t-destructive rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-black/80 backdrop-blur-sm border-primary/30">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-lg">
+                                      Delete Draft
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-sm text-muted-foreground">
+                                      Are you sure you want to delete "{post.title}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex justify-between border-t border-primary/20 pt-4">
+                                    <AlertDialogCancel asChild>
+                                      <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                                        Cancel
+                                      </Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() => handleDelete(post.id)}
+                                      >
+                                        Delete
+                                      </Button>
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         </Card>
