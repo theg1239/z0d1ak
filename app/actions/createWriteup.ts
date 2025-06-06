@@ -33,7 +33,7 @@ export async function createWriteup(data: {
   content: string;
   authorId: string;
   isDraft?: boolean;
-  tags?: string[]; // new tags property
+  tags?: string[];
 }) {
   const categoryUUID = await resolveCategoryUUID(data.categoryId);
 
@@ -62,7 +62,6 @@ export async function createWriteup(data: {
       const trimmedTag = tagName.trim();
       if (!trimmedTag) continue;
       
-      // Use eq() instead of equals() for filtering
       const existingTag = await db
         .select()
         .from(tags)

@@ -15,13 +15,13 @@ export async function getUserPosts(userId: string) {
   }
 
   const userPosts = await db
-    .select({
-      id: posts.id,
+    .select({      id: posts.id,
       title: posts.title,
       slug: posts.slug,
       excerpt: posts.excerpt,
       createdAt: posts.createdAt,
       categoryName: categories.name,
+      categoryId: posts.categoryId,
       isDraft: posts.isDraft,
       tags: sql<string>`
         COALESCE(

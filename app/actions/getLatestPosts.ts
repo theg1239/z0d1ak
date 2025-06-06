@@ -18,7 +18,6 @@ export async function getLatestPosts(limit: number = 3) {
       author: {
         name: users.name,
       },
-      // Remove null values from the aggregated tags array before converting to JSON.
       tags: sql<string>`
         COALESCE(
           array_to_json(

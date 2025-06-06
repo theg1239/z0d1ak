@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, TerminalIcon, X } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -22,6 +22,10 @@ export function SiteHeader() {
   }, [])
 
   const showDashboard = session?.user?.role === "member"
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/' })
+  }
 
   return (
     <header 
@@ -62,14 +66,24 @@ export function SiteHeader() {
               </Button>
             </Link>
           )}
-          <Link href="/login">
+          {session ? (
             <Button 
               variant="outline" 
               className="ml-2 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary h-9"
+              onClick={handleLogout}
             >
-              Login
+              Logout
             </Button>
-          </Link>
+          ) : (
+            <Link href="/login">
+              <Button 
+                variant="outline" 
+                className="ml-2 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary h-9"
+              >
+                Login
+              </Button>
+            </Link>
+          )}
         </nav>
         
         {/* Mobile Navigation */}
@@ -131,13 +145,25 @@ export function SiteHeader() {
                   </Link>
                 )}
                 <div className="mt-auto p-4 border-t border-primary/20">
-                  <Link 
-                    href="/login" 
-                    className="flex items-center justify-center w-full p-2 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
+                  {session ? (
+                    <button
+                      className="flex items-center justify-center w-full p-2 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                      onClick={() => {
+                        setIsMenuOpen(false)
+                        handleLogout()
+                      }}
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <Link 
+                      href="/login" 
+                      className="flex items-center justify-center w-full p-2 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                  )}
                 </div>
               </nav>
               <div className="p-4 border-t border-primary/20 font-mono text-xs">

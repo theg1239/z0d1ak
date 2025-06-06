@@ -1,29 +1,53 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { posts, tags, post_tags } from "@/drizzle/schema";
+import { posts, tags, post_tags, categories } from "@/drizzle/schema";
 import { nanoid } from "nanoid";
 import { validate as isValidUUID } from "uuid";
 import { eq } from "drizzle-orm";
 import { fetchCategoriesAction } from "@/app/actions/fetchCategories";
 
 async function resolveCategoryUUID(providedCategory: string): Promise<string> {
-  const trimmed = providedCategory.trim() || "misc";
+  const trimmed = providedCategory?.trim() || "misc";
 
   if (isValidUUID(trimmed)) {
-    return trimmed;
+    const allCategories = await fetchCategoriesAction();
+    const exists = allCategories.some(cat => cat.id === trimmed);
+    if (exists) {
+      return trimmed;
+    }
   }
 
+  // Try to find category by name
   const allCategories = await fetchCategoriesAction();
   const matchedCategory = allCategories.find(
     (cat) => cat.name.toLowerCase() === trimmed.toLowerCase()
   );
 
-  if (!matchedCategory || !isValidUUID(matchedCategory.id)) {
-    throw new Error("Invalid category identifier provided.");
+  if (matchedCategory && isValidUUID(matchedCategory.id)) {
+    return matchedCategory.id;
   }
 
-  return matchedCategory.id;
+  const miscCategory = allCategories.find(cat => cat.name.toLowerCase() === "misc");
+  if (miscCategory && isValidUUID(miscCategory.id)) {
+    return miscCategory.id;
+  }
+
+  try {
+    const newMiscCategory = await db.insert(categories)
+      .values({
+        name: "misc"
+      })
+      .returning();
+    return newMiscCategory[0].id;
+  } catch (error) {
+    const allCats = await fetchCategoriesAction();
+    const misc = allCats.find(cat => cat.name.toLowerCase() === "misc");
+    if (misc) {
+      return misc.id;
+    }
+    throw new Error("Could not resolve category");
+  }
 }
 
 export async function saveDraftPost(data: {

@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import Link from "next/link"
 import {
   PenLine,
@@ -34,6 +34,24 @@ import { formatDate } from "@/lib/utils"
 import ReactMarkdown from "react-markdown"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
+import { updatePost } from "../actions/updatePost"
+import { deletePost } from "../actions/deletePost"
+
+interface DashboardPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  createdAt: string;
+  categoryName: string | null;
+  categoryId: string | null;
+  isDraft: boolean;
+}
+
+interface DashboardClientProps {
+  session: any;
+  posts: DashboardPost[];
+}
 
 type HeadingProps = React.HTMLAttributes<HTMLDivElement> & {
   children?: React.ReactNode
@@ -91,20 +109,22 @@ export default function DashboardClient({
   session,
   posts,
 }: {
-  session: any
+  session: any;
   posts: Array<{
-    id: string
-    title: string
-    slug: string
-    excerpt: string
-    createdAt: string
-    categoryName: string | null
-    isDraft: boolean
-  }>
+    id: string;
+    title: string;
+    slug: string;
+    excerpt: string;
+    createdAt: string;
+    categoryName: string | null;
+    categoryId: string | null;
+    isDraft: boolean;
+  }>;
 }) {
   const [activeTab, setActiveTab] = useState("writeups")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [timeString, setTimeString] = useState("")
+  const [isLoading, setIsLoading] = useState<string | null>(null)
 
   const publishedPosts = posts.filter((post) => !post.isDraft)
   const draftPosts = posts.filter((post) => post.isDraft)
@@ -120,7 +140,37 @@ export default function DashboardClient({
     const interval = setInterval(updateTime, 1000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [])  
+    const handleUnpublish = async (post: DashboardPost) => {
+    try {
+      setIsLoading(post.id);
+      await updatePost({
+        id: post.id,
+        isDraft: true,
+        title: post.title,
+        content: post.excerpt || post.title,
+        excerpt: post.excerpt || post.title,
+        categoryId: post.categoryId || "00000000-0000-0000-0000-000000000000",
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to unpublish post:", error);
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const handleDelete = async (postId: string) => {
+    try {
+      setIsLoading(postId)
+      await deletePost(postId)
+      window.location.reload()
+    } catch (error) {
+      console.error("Failed to delete post:", error)
+    } finally {
+      setIsLoading(null)
+    }
+  }
 
   const NavItems = () => (
     <nav className="flex flex-col w-full">
@@ -185,7 +235,6 @@ export default function DashboardClient({
 
       <main className="flex-1">
         <div className="container px-4 py-6 md:py-12">
-          {/* Mobile Navigation */}
           <div className="flex md:hidden items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">
               {activeTab === "writeups" && "My Writeups"}
@@ -238,19 +287,16 @@ export default function DashboardClient({
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-            {/* Desktop Sidebar */}
             <aside className="hidden md:block md:w-72">
-              <div className="sticky top-20 space-y-6">
-                <div className="relative">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5 rounded-xl blur-sm"></div>
-                  <Card className="relative border-primary/30 bg-black/80 backdrop-blur-sm overflow-hidden">
+              <div className="sticky top-20 space-y-6">                <div>
+                  <Card className="bg-black/80 backdrop-blur-sm overflow-hidden">
                     <CardHeader className="p-4 border-b border-primary/20 bg-primary/5">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/30">
                           <Shield className="h-5 w-5" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{session?.user?.name || "CryptoMaster"}</CardTitle>
+                          <CardTitle className="text-lg">{session?.user?.name || "Unknown"}</CardTitle>
                           <div className="text-xs text-muted-foreground font-mono">
                             <span className="text-green-500">z0d1ak@ctf</span>
                             <span className="text-muted-foreground">:</span>
@@ -272,11 +318,8 @@ export default function DashboardClient({
                       </div>
                     </div>
                   </Card>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/0 rounded-xl blur-sm"></div>
-                  <Card className="relative border-primary/30 bg-black/80 backdrop-blur-sm">
+                </div>                <div>
+                  <Card className="border-primary/30 bg-black/80 backdrop-blur-sm">
                     <CardHeader className="p-4">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Terminal className="h-4 w-4 text-primary" />
@@ -304,7 +347,6 @@ export default function DashboardClient({
 
             <div className="flex-1">
               <div className="flex items-center justify-between mb-6">
-                {/* Title is shown in mobile nav for small screens */}
                 <div className="hidden md:block">
                   <h1 className="text-3xl font-bold flex items-center gap-2">
                     {activeTab === "writeups" && (
@@ -361,15 +403,15 @@ export default function DashboardClient({
                           <div className="flex flex-col md:flex-row">
                             <CardHeader className="flex-1 p-4 md:p-6">
                               <div className="flex flex-wrap gap-2 mb-3">
-                                <div className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs flex items-center gap-1 text-primary border border-primary/30">
+                                <div className="flex rounded-full bg-primary/10 px-3 py-1 text-xs items-center gap-1 text-primary border border-primary/30">
                                   {getCategoryIcon(post.categoryName)}
                                   {post.categoryName || "Uncategorized"}
                                 </div>
-                                <div className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs flex items-center gap-1 text-primary border border-primary/30">
+                                <div className="flex rounded-full bg-primary/10 px-3 py-1 text-xs items-center gap-1 text-primary border border-primary/30">
                                   <Calendar className="h-3 w-3" />
                                   {formatDate(post.createdAt)}
                                 </div>
-                                <div className="inline-block rounded-full bg-green-500/10 px-3 py-1 text-xs flex items-center gap-1 text-green-500 border border-green-500/30">
+                                <div className="flex rounded-full bg-green-500/10 px-3 py-1 text-xs items-center gap-1 text-green-500 border border-green-500/30">
                                   <Eye className="h-3 w-3" />
                                   Published
                                 </div>
@@ -406,14 +448,91 @@ export default function DashboardClient({
                                   Edit
                                 </Button>
                               </Link>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10 flex-1 md:flex-none w-full"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isLoading === post.id}
+                                    className="gap-1 w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 flex-1 md:flex-none"
+                                  >
+                                    {isLoading === post.id ? (
+                                      <div className="w-4 h-4 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin" />
+                                    ) : (
+                                      <EyeOff className="h-4 w-4" />
+                                    )}
+                                    Unpublish
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-black/80 backdrop-blur-sm border-primary/30">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-lg">
+                                      Unpublish Writeup
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-sm text-muted-foreground">
+                                      Are you sure you want to unpublish "{post.title}"? It will be moved to drafts and will no longer be visible to other users.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex justify-between border-t border-primary/20 pt-4">
+                                    <AlertDialogCancel asChild>
+                                      <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                                        Cancel
+                                      </Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                      <Button
+                                        variant="outline"
+                                        className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                                        onClick={() => handleUnpublish(post)}
+                                      >
+                                        Unpublish
+                                      </Button>
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isLoading === post.id}
+                                    className="gap-1 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10 flex-1 md:flex-none w-full"
+                                  >
+                                    {isLoading === post.id ? (
+                                      <div className="w-4 h-4 border-2 border-destructive/30 border-t-destructive rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-black/80 backdrop-blur-sm border-primary/30">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-lg">
+                                      Delete Writeup
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-sm text-muted-foreground">
+                                      Are you sure you want to delete "{post.title}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex justify-between border-t border-primary/20 pt-4">
+                                    <AlertDialogCancel asChild>
+                                      <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                                        Cancel
+                                      </Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                      <Button
+                                        variant="destructive"
+                                        onClick={() => handleDelete(post.id)}
+                                      >
+                                        Delete
+                                      </Button>
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         </Card>
@@ -459,15 +578,15 @@ export default function DashboardClient({
                           <div className="flex flex-col md:flex-row">
                             <CardHeader className="flex-1 p-4 md:p-6">
                               <div className="flex flex-wrap gap-2 mb-3">
-                                <div className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs flex items-center gap-1 text-primary border border-primary/30">
+                                <div className="flex rounded-full bg-primary/10 px-3 py-1 text-xs items-center gap-1 text-primary border border-primary/30">
                                   {getCategoryIcon(post.categoryName)}
                                   {post.categoryName || "Uncategorized"}
                                 </div>
-                                <div className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs flex items-center gap-1 text-primary border border-primary/30">
+                                <div className="flex rounded-full bg-primary/10 px-3 py-1 text-xs items-center gap-1 text-primary border border-primary/30">
                                   <Calendar className="h-3 w-3" />
                                   {formatDate(post.createdAt)}
                                 </div>
-                                <div className="inline-block rounded-full bg-yellow-500/10 px-3 py-1 text-xs flex items-center gap-1 text-yellow-500 border border-yellow-500/30">
+                                <div className="flex rounded-full bg-yellow-500/10 px-3 py-1 text-xs items-center gap-1 text-yellow-500 border border-yellow-500/30">
                                   <EyeOff className="h-3 w-3" />
                                   Draft
                                 </div>
@@ -693,4 +812,3 @@ export default function DashboardClient({
     </div>
   )
 }
-
