@@ -48,7 +48,10 @@ export default function FileStructure({ competitions }: FileStructureProps) {
               />
             )}
             <Folder className="h-4 w-4 text-yellow-500" />
-            <Link href={`/competitions/${competition.id}`} className="hover:underline">
+            <Link
+              href={`/competitions/${encodeURIComponent(competition.name)}`}
+              className="hover:underline"
+            >
               {competition.name}
             </Link>
             <span className="text-xs text-muted-foreground">

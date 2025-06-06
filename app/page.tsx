@@ -299,9 +299,8 @@ function DesktopHero() {
 
             <TerminalPrompt text="cat /etc/banner" />
             <div className="bg-black/50 p-3 rounded border border-primary/20 my-2">
-              <p className="text-white">🏆 Ranked #42 globally in CTFtime</p>
               <p className="text-white">🔐 Specializing in web, crypto, and forensics</p>
-              <p className="text-white">🌐 Join our community of security enthusiasts</p>
+              <p className="text-white">🌐 Join our community of CTF enthusiasts</p>
             </div>
 
             <TerminalPrompt text="./join_team.sh" />
